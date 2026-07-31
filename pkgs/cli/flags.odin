@@ -31,3 +31,9 @@ Flags :: [?]Flag {
 	{command = .Help, name = "help", short = "h", desc = "Show help message"},
 }
 
+Build_Options :: [?]Flag {
+	{name = "--release", desc = "Compile the project in release mode"},
+	{name = "--silent", desc = "Silent the terminal output"},
+	{name = "help", short = "h", desc = "Show help message"},
+}
+

@@ -11,7 +11,7 @@ import "pkgs:cli"
 import "pkgs:new"
 import "pkgs:run"
 
-VERSION := #config(VERSION, "0.3.2")
+VERSION := #config(VERSION, "0.3.3")
 
 main :: proc() {
 	if len(os.args) < 2 {

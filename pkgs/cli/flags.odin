@@ -1,13 +1,33 @@
 package cli
 
+Command :: enum {
+	Build,
+	New,
+	// Add,
+	// Remove,
+	// Install,
+	// Uninstall,
+	// Toolchain,
+	Version,
+	Help,
+	Error,
+}
+
 @(private = "file")
 Flag :: struct {
+	command:           Command,
 	name, short, desc: string,
 }
 
 Flags :: [?]Flag {
-	{name = "build", short = "b", desc = "Compile the current package"},
-	{name = "new", desc = "Create a new Odin project"},
-	{name = "version", desc = "Show Mimir's version"},
+	{
+		command = .Build,
+		name = "build",
+		short = "b",
+		desc = "Compile the current package",
+	},
+	{command = .New, name = "new", desc = "Create a new Odin project"},
+	{command = .Version, name = "version", desc = "Show Mimir's version"},
+	{command = .Help, name = "help", short = "h", desc = "Show help message"},
 }
 

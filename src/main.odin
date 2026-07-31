@@ -6,31 +6,34 @@ package main
 
 import "core:fmt"
 import "core:os"
-
 import "pkgs:cli"
 import "pkgs:new"
 
-VERSION := #config(VERSION, "0.1.2")
+VERSION := #config(VERSION, "0.1.4")
 
 main :: proc() {
 	if len(os.args) < 2 {
-		cli.print_usage()
+		cli.print_usage(os.stderr)
 		os.exit(1)
 	}
 
-	if len(os.args) > 1 && os.args[1] == "help" {
-		cli.print_usage()
-		os.exit(0)
-	}
+	state: State
 
-	if len(os.args) > 1 && os.args[1] == "version" {
-		fmt.println("Mimir version", VERSION)
-		os.exit(0)
-	}
+	get_command(&state)
 
-	if len(os.args) > 2 && os.args[1] == "new" {
+	switch state.command {
+	case .Build:
+		fmt.println("build")
+	case .New:
 		new.create()
-		os.exit(0)
+	case .Version:
+		fmt.println("Mimir version", VERSION)
+	case .Help:
+		cli.print_usage()
+	case .Error:
+		cli.unknown_command()
+		cli.print_usage(os.stderr)
+		os.exit(1)
 	}
 }
 

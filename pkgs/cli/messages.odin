@@ -1,18 +1,21 @@
 package cli
 
 import "core:fmt"
+import "core:os"
 import "core:strings"
 import an "core:terminal/ansi"
 
-print_usage :: proc() {
-	fmt.println("Mimir - Odin's toolchain\n")
-	fmt.print(
+print_usage :: proc(output := os.stdout) {
+	fmt.fprintln(output, "Mimir - Odin's toolchain\n")
+	fmt.fprint(
+		output,
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
 		"Usage: ",
 		sep = "",
 	)
-	fmt.println(
+	fmt.fprintln(
+		output,
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
 		"mimir ",
@@ -22,7 +25,8 @@ print_usage :: proc() {
 		"\n",
 		sep = "",
 	)
-	fmt.println(
+	fmt.fprintln(
+		output,
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
 		"Commands:",
@@ -52,7 +56,8 @@ print_usage :: proc() {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.printf(
+		fmt.fprintf(
+			output,
 			"    %s%s%s%s%s%s\n",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
@@ -63,3 +68,15 @@ print_usage :: proc() {
 		)
 	}
 }
+
+unknown_command :: proc() {
+	fmt.fprintf(
+		os.stderr,
+		"  %s%sUnknown Command%s: %s\n\n",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_YELLOW),
+		color_ansi(an.RESET),
+		os.args[1],
+	)
+}
+

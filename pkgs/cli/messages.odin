@@ -5,6 +5,65 @@ import "core:os"
 import "core:strings"
 import an "core:terminal/ansi"
 
+print_run_usage :: proc(output := os.stdout) {
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		color_ansi(an.FG_BRIGHT_BLUE),
+		"run ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_BLUE),
+		"[OPTIONS]",
+		color_ansi(an.RESET),
+		sep = "",
+	)
+	fmt.println("Compiles (if there are changes) and runs the project\n")
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Options:",
+		sep = "",
+	)
+
+	// First pass: find the widest command name (including the short
+	// flag suffix) so the descriptions all line up in the output.
+	max_width := 0
+	for flag in Run_Options {
+		width := len(flag.name)
+		if flag.short != "" {
+			width += len(flag.short) + 2 // ", " + short
+		}
+		if width > max_width {
+			max_width = width
+		}
+	}
+
+	// Second pass: print each command, padded to max_width plus a
+	// small gap before the description.
+	for flag in Run_Options {
+		name := flag.name
+		if flag.short != "" {
+			name = fmt.tprintf("%s, %s", flag.name, flag.short)
+		}
+
+		padding := strings.repeat(" ", max_width - len(name) + 2)
+
+		fmt.fprintf(
+			output,
+			"    %s%s%s%s%s%s\n",
+			color_ansi(an.BOLD),
+			color_ansi(an.FG_BRIGHT_CYAN),
+			name,
+			color_ansi(an.RESET),
+			padding,
+			flag.desc,
+		)
+	}
+}
+
 print_build_usage :: proc(output := os.stdout) {
 	fmt.fprintln(
 		output,
@@ -16,9 +75,10 @@ print_build_usage :: proc(output := os.stdout) {
 		color_ansi(an.RESET),
 		color_ansi(an.FG_BLUE),
 		"[OPTIONS]",
-		"\n",
+		color_ansi(an.RESET),
 		sep = "",
 	)
+	fmt.println("Compiles the project if there are any changes\n")
 	fmt.fprintln(
 		output,
 		color_ansi(an.BOLD),

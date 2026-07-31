@@ -2,6 +2,7 @@ package cli
 
 Command :: enum {
 	Build,
+	Run,
 	New,
 	// Add,
 	// Remove,
@@ -24,7 +25,13 @@ Flags :: [?]Flag {
 		command = .Build,
 		name = "build",
 		short = "b",
-		desc = "Compile the current package",
+		desc = "Compile the current project",
+	},
+	{
+		command = .Run,
+		name = "run",
+		short = "r",
+		desc = "Compile and run the current project",
 	},
 	{command = .New, name = "new", desc = "Create a new Odin project"},
 	{command = .Version, name = "version", desc = "Show Mimir's version"},
@@ -33,7 +40,7 @@ Flags :: [?]Flag {
 
 Build_Options :: [?]Flag {
 	{name = "--release", desc = "Compile the project in release mode"},
-	{name = "--silent", desc = "Silent the terminal output"},
+	{name = "--silent", short = "-s", desc = "Silent the terminal output"},
 	{name = "help", short = "h", desc = "Show help message"},
 }
 

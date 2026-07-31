@@ -17,6 +17,8 @@ get_command :: proc(state: ^State) {
 		state.command = .New
 	case "build", "b":
 		state.command = .Build
+	case "run", "r":
+		state.command = .Run
 	case:
 		state.command = .Error
 	}

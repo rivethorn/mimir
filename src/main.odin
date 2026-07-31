@@ -9,8 +9,9 @@ import "core:os"
 import "pkgs:build"
 import "pkgs:cli"
 import "pkgs:new"
+import "pkgs:run"
 
-VERSION := #config(VERSION, "0.2.1")
+VERSION := #config(VERSION, "0.3.2")
 
 main :: proc() {
 	if len(os.args) < 2 {
@@ -25,6 +26,8 @@ main :: proc() {
 	switch state.command {
 	case .Build:
 		build.handle_build()
+	case .Run:
+		run.handle_run()
 	case .New:
 		new.create()
 	case .Version:

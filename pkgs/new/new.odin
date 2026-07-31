@@ -2,12 +2,11 @@ package new
 
 import "core:fmt"
 import "core:os"
-import "core:path/filepath"
 import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
 
-create :: proc() -> os.Error {
+create :: proc() {
 	project_name := os.args[2]
 
 	// Basic validation
@@ -52,20 +51,23 @@ create :: proc() -> os.Error {
 		}
 	}
 
-	// Create src/main.odin
-	src_dir, err := filepath.join([]string{project_dir, "src"})
-	if err != nil {
-		if !os.exists(project_dir) {
+	// Create pkgs directory
+	pkgs_dir := fmt.tprintf("%s/pkgs", project_dir)
+	if err := os.make_directory(pkgs_dir); err != nil {
+		if !os.exists(pkgs_dir) {
 			fmt.eprintf(
 				"%sFailed%s to create directory %q: %v\n",
 				cli.color_ansi(ansi.FG_RED),
 				cli.color_ansi(ansi.RESET),
-				project_dir,
+				pkgs_dir,
 				err,
 			)
 			os.exit(1)
 		}
 	}
+
+	// Create src/main.odin
+	src_dir := fmt.tprintf("%s/src", project_dir)
 	if err := os.make_directory(src_dir); err != nil {
 		if !os.exists(src_dir) {
 			fmt.eprintf(
@@ -179,7 +181,5 @@ create :: proc() -> os.Error {
 		cli.color_ansi(ansi.RESET),
 		project_name,
 	)
-
-	return nil
 }
 

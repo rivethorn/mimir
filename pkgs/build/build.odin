@@ -196,7 +196,7 @@ check_build_flags :: proc() -> (release: bool, silent: bool) {
 	return release, silent
 }
 
-handle_build :: proc() {
+handle_build :: proc(silent := false) {
 	release, silent := check_build_flags()
 
 	project_dir, err := os.get_working_directory(context.temp_allocator)

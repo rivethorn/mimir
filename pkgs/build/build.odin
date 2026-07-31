@@ -162,6 +162,41 @@ handle_build :: proc() {
 		os.exit(1)
 	}
 
+	source_dir := fmt.tprintf("%s/src/", project_dir)
+
+	if !os.exists(source_dir) {
+		fmt.eprintln(
+			cli.color_ansi(ansi.FG_BRIGHT_RED),
+			"This directory does not contain a src/ directory, where are we?",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		os.exit(1)
+	}
+
+	walker := os.walker_create(source_dir)
+	files: [dynamic]string
+
+	for info in os.walker_walk(&walker) {
+		if strings.has_suffix(info.fullpath, ".odin") {
+			append(&files, info.name)
+			continue
+		}
+	}
+
+	delete(files)
+	os.walker_destroy(&walker)
+
+	if len(files) == 0 {
+		fmt.eprintln(
+			cli.color_ansi(ansi.FG_BRIGHT_RED),
+			"This directory does not contain a valid Odin project",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		os.exit(1)
+	}
+
 	tmp := strings.split(project_dir, "/")
 	project_name := tmp[len(tmp) - 1]
 

@@ -40,14 +40,4 @@ command_exists :: proc(command_name: string) -> bool {
 
 	return false
 }
-try_execute :: proc(command: []string) -> bool {
-	handle, err := os.process_start(os.Process_Desc{command = command})
-
-	if err != nil {
-		return false
-	}
-
-	_e := os.process_kill(handle)
-	return true
-}
 

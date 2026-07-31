@@ -2,19 +2,66 @@ package build
 
 import "core:fmt"
 import "core:os"
+import "core:path/filepath"
 import "core:strings"
 import "core:terminal/ansi"
 import "core:time"
 import "pkgs:cli"
 import "pkgs:util"
 
+@(private)
 Build_Error :: enum {
 	None,
 	Command_Not_Found,
 	No_Working_Dir,
 	Compilation_Failure,
+	Spawn_Failure,
 }
 
+needs_rebuild :: proc(source_path, binary_path: string) -> bool {
+	bin_info, bin_err := os.stat(binary_path, context.temp_allocator)
+	if bin_err != nil {
+		return true
+	}
+
+	src_info, src_err := os.stat(source_path, context.temp_allocator)
+	if src_err != nil {
+		fmt.eprintf("Source path error: %v\n", src_err)
+		return true
+	}
+
+	if !(src_info.type == .Directory) {
+		return(
+			src_info.modification_time._nsec >
+			bin_info.modification_time._nsec \
+		)
+	}
+
+	latest_src_mod := src_info.modification_time
+
+	fd, dir_err := os.open(source_path)
+	if dir_err != nil {
+		return true
+	}
+	defer os.close(fd)
+
+	infos, read_err := os.read_dir(fd, -1, context.temp_allocator)
+	if read_err != nil {
+		return true
+	}
+
+	for info in infos {
+		if filepath.ext(info.name) == ".odin" {
+			if info.modification_time._nsec > latest_src_mod._nsec {
+				latest_src_mod = info.modification_time
+			}
+		}
+	}
+
+	return latest_src_mod._nsec > bin_info.modification_time._nsec
+}
+
+@(private)
 start_build :: proc(config: ^Build_Config) -> Build_Error {
 	if !util.command_exists("odin") {
 		return .Command_Not_Found
@@ -32,9 +79,11 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 			fmt.println(
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-				"Compiling ",
+				"   Compiling ",
 				cli.color_ansi(ansi.RESET),
+				"`",
 				config.name,
+				"`",
 				cli.color_ansi(ansi.FAINT),
 				" in release mode",
 				cli.color_ansi(ansi.RESET),
@@ -45,9 +94,11 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 			fmt.println(
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-				"Compiling ",
+				"   Compiling ",
 				cli.color_ansi(ansi.RESET),
+				"`",
 				config.name,
+				"`",
 				cli.color_ansi(ansi.FAINT),
 				" in debug mode",
 				cli.color_ansi(ansi.RESET),
@@ -67,31 +118,28 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 			release_mode,
 		},
 		working_dir = working_dir,
+		stderr      = os.stderr,
+		stdout      = os.stdout,
 	}
 
-	state, stdout, stderr, exec_err := os.process_exec(
-		build_command,
-		context.temp_allocator,
-	)
+	build_process, exec_err := os.process_start(build_command)
 	if exec_err != nil {
-		return .Compilation_Failure
+		return .Spawn_Failure
 	}
-	defer delete(stdout)
-	defer delete(stderr)
+
+	state, _ := os.process_wait(build_process)
 
 	if !config.silent && state.exit_code != 0 {
 		fmt.eprintln(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"Comlilation Failed\n",
+			"Compilation Failed\n",
 			cli.color_ansi(ansi.RESET),
 			"exit code: ",
 			state.exit_code,
 			"\n",
-			string(stderr),
 			sep = "",
 		)
-
 		os.exit(state.exit_code)
 	}
 
@@ -104,12 +152,12 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-			"Finished ",
+			"    Finished ",
 			cli.color_ansi(ansi.RESET),
 			"successfully in ",
 			cli.color_ansi(ansi.BOLD),
 			state.user_time,
-			"\n",
+			"\n\n",
 			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 			"Output: ",
 			cli.color_ansi(ansi.RESET),
@@ -118,15 +166,15 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 		)
 	}
 
-	defer os.exit(state.exit_code)
 	return .None
 }
 
+@(private)
 check_build_flags :: proc() -> (release: bool, silent: bool) {
 	for i := 2; i < len(os.args); i += 1 {
 		if os.args[i] == "--release" {
 			release = true
-		} else if os.args[i] == "--silent" {
+		} else if os.args[i] == "--silent" || os.args[i] == "-s" {
 			silent = true
 		} else if os.args[i] == "help" || os.args[i] == "h" {
 			cli.print_build_usage()
@@ -145,7 +193,7 @@ check_build_flags :: proc() -> (release: bool, silent: bool) {
 		}
 	}
 
-	return
+	return release, silent
 }
 
 handle_build :: proc() {
@@ -174,6 +222,27 @@ handle_build :: proc() {
 		os.exit(1)
 	}
 
+	tmp := strings.split(project_dir, "/")
+	project_name := tmp[len(tmp) - 1]
+
+	exe_extension := ""
+	when ODIN_OS == .Windows {
+		exe_extension = ".exe"
+	}
+
+	output := fmt.tprintf("%s/%s%s", "bin", project_name, exe_extension)
+
+	if !release && !needs_rebuild(source_dir, output) {
+		fmt.println(
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_YELLOW),
+			"Already at latest change",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		return
+	}
+
 	walker := os.walker_create(source_dir)
 	files: [dynamic]string
 
@@ -197,16 +266,6 @@ handle_build :: proc() {
 		os.exit(1)
 	}
 
-	tmp := strings.split(project_dir, "/")
-	project_name := tmp[len(tmp) - 1]
-
-	exe_extension := ""
-	when ODIN_OS == .Windows {
-		exe_extension = ".exe"
-	}
-
-	output := fmt.tprintf("%s/%s%s", "bin", project_name, exe_extension)
-
 	config := Build_Config {
 		name    = project_name,
 		path    = "src",
@@ -215,6 +274,17 @@ handle_build :: proc() {
 		silent  = silent,
 	}
 
-	start_build(&config)
+	build_err := start_build(&config)
+	if build_err != nil {
+		fmt.eprintln(
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_RED),
+			"Build Error: ",
+			cli.color_ansi(ansi.RESET),
+			build_err,
+			sep = "",
+		)
+		os.exit(1)
+	}
 }
 

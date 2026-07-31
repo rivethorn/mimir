@@ -44,3 +44,8 @@ Build_Options :: [?]Flag {
 	{name = "help", short = "h", desc = "Show help message"},
 }
 
+Run_Options :: [?]Flag {
+	{name = "--silent", short = "-s", desc = "Silent the terminal output"},
+	{name = "help", short = "h", desc = "Show help message"},
+}
+

@@ -225,6 +225,9 @@ handle_build :: proc(silent := false) {
 	}
 
 	tmp := strings.split(project_dir, "/")
+	when ODIN_OS == .Windows {
+		tmp = strings.split(project_dir, "\\")
+	}
 	project_name := tmp[len(tmp) - 1]
 
 	exe_extension := ""

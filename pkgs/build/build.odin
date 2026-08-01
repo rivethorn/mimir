@@ -69,6 +69,7 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 
 	output := fmt.tprintf("-out:%s", config.output)
 	release_mode := config.release ? "-o:speed" : "-o:none"
+	debug_mode := config.release ? "" : "-debug"
 	working_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		return .No_Working_Dir
@@ -116,6 +117,7 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 			config.path,
 			output,
 			release_mode,
+			debug_mode,
 		},
 		working_dir = working_dir,
 		stderr      = os.stderr,

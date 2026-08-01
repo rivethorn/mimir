@@ -1,26 +1,14 @@
 package cli
 
-Command :: enum {
-	Build,
-	Run,
-	New,
-	// Add,
-	// Remove,
-	// Install,
-	// Uninstall,
-	// Toolchain,
-	Version,
-	Help,
-	Error,
-}
+import "pkgs:state"
 
 @(private = "file")
 Flag :: struct {
-	command:           Command,
+	command:           state.Command,
 	name, short, desc: string,
 }
 
-Flags :: [?]Flag {
+Main_Commands :: [?]Flag {
 	{
 		command = .Build,
 		name = "build",
@@ -39,13 +27,27 @@ Flags :: [?]Flag {
 }
 
 Build_Options :: [?]Flag {
-	{name = "--release", desc = "Compile the project in release mode"},
+	{
+		name = "--release",
+		short = "-r",
+		desc = "Compile the project in release mode",
+	},
 	{name = "--silent", short = "-s", desc = "Silent the terminal output"},
-	{name = "help", short = "h", desc = "Show help message"},
+	{name = "--help", short = "-h", desc = "Show help message"},
 }
 
 Run_Options :: [?]Flag {
+	{
+		name = "--release",
+		short = "-r",
+		desc = "Compile and run the project in release mode",
+	},
+	{
+		name = "--force",
+		short = "-f",
+		desc = "Force the compiler to recompile the project",
+	},
 	{name = "--silent", short = "-s", desc = "Silent the terminal output"},
-	{name = "help", short = "h", desc = "Show help message"},
+	{name = "--help", short = "-h", desc = "Show help message"},
 }
 

@@ -51,21 +51,6 @@ create :: proc() {
 		}
 	}
 
-	// Create bin directory
-	bin_dir := fmt.tprintf("%s/bin", project_dir)
-	if err := os.make_directory(bin_dir); err != nil {
-		if !os.exists(bin_dir) {
-			fmt.eprintf(
-				"%sFailed%s to create directory %q: %v\n",
-				cli.color_ansi(ansi.FG_RED),
-				cli.color_ansi(ansi.RESET),
-				bin_dir,
-				err,
-			)
-			os.exit(1)
-		}
-	}
-
 	// Create pkgs directory
 	pkgs_dir := fmt.tprintf("%s/pkgs", project_dir)
 	if err := os.make_directory(pkgs_dir); err != nil {

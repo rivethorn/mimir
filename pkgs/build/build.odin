@@ -7,6 +7,7 @@ import "core:strings"
 import "core:terminal/ansi"
 import "core:time"
 import "pkgs:cli"
+import "pkgs:state"
 import "pkgs:util"
 
 @(private)
@@ -62,7 +63,7 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 }
 
 @(private)
-start_build :: proc(config: ^Build_Config) -> Build_Error {
+start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	if !util.command_exists("odin") {
 		return .Command_Not_Found
 	}
@@ -114,7 +115,7 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 		command     = []string {
 			"odin",
 			"build",
-			config.path,
+			config.src_path,
 			output,
 			release_mode,
 			debug_mode,
@@ -159,11 +160,7 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 			"successfully in ",
 			cli.color_ansi(ansi.BOLD),
 			state.user_time,
-			"\n\n",
-			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
-			"Output: ",
 			cli.color_ansi(ansi.RESET),
-			config.output,
 			sep = "",
 		)
 	}
@@ -171,36 +168,7 @@ start_build :: proc(config: ^Build_Config) -> Build_Error {
 	return .None
 }
 
-@(private)
-check_build_flags :: proc() -> (release: bool, silent: bool) {
-	for i := 2; i < len(os.args); i += 1 {
-		if os.args[i] == "--release" {
-			release = true
-		} else if os.args[i] == "--silent" || os.args[i] == "-s" {
-			silent = true
-		} else if os.args[i] == "help" || os.args[i] == "h" {
-			cli.print_build_usage()
-			os.exit(0)
-		} else {
-			fmt.eprintln(
-				cli.color_ansi(ansi.BOLD),
-				cli.color_ansi(ansi.FG_BRIGHT_RED),
-				"Unsupported option ",
-				cli.color_ansi(ansi.RESET),
-				os.args[i],
-				sep = "",
-			)
-			cli.print_build_usage(os.stderr)
-			os.exit(1)
-		}
-	}
-
-	return release, silent
-}
-
-handle_build :: proc(silent := false) {
-	release, silent := check_build_flags()
-
+handle_build :: proc(app_state: ^state.State) {
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		fmt.eprintln(
@@ -212,8 +180,39 @@ handle_build :: proc(silent := false) {
 		os.exit(1)
 	}
 
-	source_dir := fmt.tprintf("%s/src/", project_dir)
+	bin_dir := fmt.tprintf("%s/bin", project_dir)
+	if err := os.make_directory(bin_dir); err != nil {
+		if !os.exists(bin_dir) {
+			fmt.eprintf(
+				"%sFailed%s to create directory %q: %v\n",
+				cli.color_ansi(ansi.FG_RED),
+				cli.color_ansi(ansi.RESET),
+				bin_dir,
+				err,
+			)
+			os.exit(1)
+		}
+	}
 
+	tmp := strings.split(project_dir, "/")
+	when ODIN_OS == .Windows {
+		tmp = strings.split(project_dir, "\\")
+	}
+	project_name := tmp[len(tmp) - 1]
+	delete(tmp)
+
+	exe_extension := ""
+	when ODIN_OS == .Windows {
+		exe_extension = ".exe"
+	}
+
+	output := fmt.tprintf("%s/%s%s", "bin", project_name, exe_extension)
+
+	app_state.config.name = project_name
+	app_state.config.src_path = "src"
+	app_state.config.output = output
+
+	source_dir := fmt.tprintf("%s/src/", project_dir)
 	if !os.exists(source_dir) {
 		fmt.eprintln(
 			cli.color_ansi(ansi.FG_BRIGHT_RED),
@@ -224,22 +223,13 @@ handle_build :: proc(silent := false) {
 		os.exit(1)
 	}
 
-	tmp := strings.split(project_dir, "/")
-	when ODIN_OS == .Windows {
-		tmp = strings.split(project_dir, "\\")
-	}
-	project_name := tmp[len(tmp) - 1]
-
-	exe_extension := ""
-	when ODIN_OS == .Windows {
-		exe_extension = ".exe"
-	}
-
-	output := fmt.tprintf("%s/%s%s", "bin", project_name, exe_extension)
-
-	if !release && !needs_rebuild(source_dir, output) {
+	if !app_state.config.force_recompile &&
+	   !app_state.config.release &&
+	   !needs_rebuild(source_dir, output) {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
+			"     No need ",
 			cli.color_ansi(ansi.FG_YELLOW),
 			"Already at latest change",
 			cli.color_ansi(ansi.RESET),
@@ -250,6 +240,7 @@ handle_build :: proc(silent := false) {
 
 	walker := os.walker_create(source_dir)
 	files: [dynamic]string
+	defer delete(files)
 
 	for info in os.walker_walk(&walker) {
 		if strings.has_suffix(info.fullpath, ".odin") {
@@ -258,7 +249,6 @@ handle_build :: proc(silent := false) {
 		}
 	}
 
-	delete(files)
 	os.walker_destroy(&walker)
 
 	if len(files) == 0 {
@@ -271,15 +261,7 @@ handle_build :: proc(silent := false) {
 		os.exit(1)
 	}
 
-	config := Build_Config {
-		name    = project_name,
-		path    = "src",
-		output  = output,
-		release = release,
-		silent  = silent,
-	}
-
-	build_err := start_build(&config)
+	build_err := start_build(&app_state.config)
 	if build_err != nil {
 		fmt.eprintln(
 			cli.color_ansi(ansi.BOLD),

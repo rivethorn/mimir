@@ -6,35 +6,9 @@ import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:build"
 import "pkgs:cli"
+import "pkgs:state"
 
-@(private)
-check_run_flags :: proc() -> (silent: bool) {
-	for i := 2; i < len(os.args); i += 1 {
-		if os.args[i] == "--silent" || os.args[i] == "-s" {
-			silent = true
-		} else if os.args[i] == "help" || os.args[i] == "h" {
-			cli.print_run_usage()
-			os.exit(0)
-		} else {
-			fmt.eprintln(
-				cli.color_ansi(ansi.BOLD),
-				cli.color_ansi(ansi.FG_BRIGHT_RED),
-				"Unsupported option ",
-				cli.color_ansi(ansi.RESET),
-				os.args[i],
-				sep = "",
-			)
-			cli.print_run_usage(os.stderr)
-			os.exit(1)
-		}
-	}
-
-	return silent
-}
-
-handle_run :: proc() {
-	silent := check_run_flags()
-
+handle_run :: proc(app_state: ^state.State) {
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		fmt.eprintln(
@@ -67,20 +41,42 @@ handle_run :: proc() {
 	source_path := fmt.tprintf("%s/src/", project_dir)
 
 	if build.needs_rebuild(source_path, bin_path) {
-		if !silent {
+		if !app_state.config.silent {
 			fmt.println(
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
 				"Changes detected. ",
 				cli.color_ansi(ansi.RESET),
 				cli.color_ansi(ansi.FG_CYAN),
-				"Rebuilding project...\n",
+				"Rebuilding project...",
 				cli.color_ansi(ansi.RESET),
 				sep = "",
 			)
 		}
 
-		build.handle_build(silent)
+		build.handle_build(app_state)
+	} else if app_state.config.force_recompile {
+		if !app_state.config.silent {
+			fmt.println(
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_BLUE),
+				"  Rebuilding project...",
+				cli.color_ansi(ansi.RESET),
+				sep = "",
+			)
+		}
+
+		build.handle_build(app_state)
+	} else {
+		fmt.println(
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
+			"     No need ",
+			cli.color_ansi(ansi.FG_YELLOW),
+			"Already at latest change",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
 	}
 
 
@@ -91,18 +87,18 @@ handle_run :: proc() {
 		stderr      = os.stderr,
 	}
 
-	if !silent {
+	if !app_state.config.silent {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-			"Running ",
+			"     Running ",
 			cli.color_ansi(ansi.RESET),
 			"`",
 			project_name,
 			"`",
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-			"...\n",
+			"...",
 			cli.color_ansi(ansi.RESET),
 			sep = "",
 		)

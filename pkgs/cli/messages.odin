@@ -5,6 +5,41 @@ import "core:os"
 import "core:strings"
 import an "core:terminal/ansi"
 
+print_run_unexpected_arg :: proc(arg: string) {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		"Unexpected argument ",
+		color_ansi(an.RESET),
+		arg,
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Usage: ",
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		"run ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"[OPTIONS]",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
+}
+
 print_run_usage :: proc(output := os.stdout) {
 	fmt.fprintln(
 		output,
@@ -62,6 +97,41 @@ print_run_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+}
+
+print_build_unexpected_arg :: proc(arg: string) {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		"Unexpected argument ",
+		color_ansi(an.RESET),
+		arg,
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Usage: ",
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		"build ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"[OPTIONS]",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
 }
 
 print_build_usage :: proc(output := os.stdout) {
@@ -153,7 +223,7 @@ print_general_usage :: proc(output := os.stdout) {
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
 	max_width := 0
-	for flag in Flags {
+	for flag in Main_Commands {
 		width := len(flag.name)
 		if flag.short != "" {
 			width += len(flag.short) + 2 // ", " + short
@@ -165,7 +235,7 @@ print_general_usage :: proc(output := os.stdout) {
 
 	// Second pass: print each command, padded to max_width plus a
 	// small gap before the description.
-	for flag in Flags {
+	for flag in Main_Commands {
 		name := flag.name
 		if flag.short != "" {
 			name = fmt.tprintf("%s, %s", flag.name, flag.short)

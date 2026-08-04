@@ -13,7 +13,7 @@ import "pkgs:new"
 import "pkgs:run"
 import "pkgs:state"
 
-VERSION := #config(VERSION, "0.5.0")
+VERSION := #config(VERSION, "0.5.1")
 
 main :: proc() {
 	if len(os.args) < 2 {

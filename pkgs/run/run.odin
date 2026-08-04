@@ -9,6 +9,8 @@ import "pkgs:cli"
 import "pkgs:state"
 
 handle_run :: proc(app_state: ^state.State) {
+	rebuild := build.handle_build(app_state)
+
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		fmt.eprintln(
@@ -32,53 +34,12 @@ handle_run :: proc(app_state: ^state.State) {
 	}
 	project_name := tmp[len(tmp) - 1]
 	bin_path := fmt.tprintf(
-		"%s/bin/%s%s",
+		"%s/bin/%s/%s%s",
 		project_dir,
+		app_state.config.release ? "release" : "debug",
 		project_name,
 		exe_extension,
 	)
-
-	source_path := fmt.tprintf("%s/src/", project_dir)
-
-	if build.needs_rebuild(source_path, bin_path) {
-		if !app_state.config.silent {
-			fmt.println(
-				cli.color_ansi(ansi.BOLD),
-				cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
-				"Changes detected. ",
-				cli.color_ansi(ansi.RESET),
-				cli.color_ansi(ansi.FG_CYAN),
-				"Rebuilding project...",
-				cli.color_ansi(ansi.RESET),
-				sep = "",
-			)
-		}
-
-		build.handle_build(app_state)
-	} else if app_state.config.force_recompile {
-		if !app_state.config.silent {
-			fmt.println(
-				cli.color_ansi(ansi.BOLD),
-				cli.color_ansi(ansi.FG_BRIGHT_BLUE),
-				"  Rebuilding project...",
-				cli.color_ansi(ansi.RESET),
-				sep = "",
-			)
-		}
-
-		build.handle_build(app_state)
-	} else {
-		fmt.println(
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-			"     No need ",
-			cli.color_ansi(ansi.FG_YELLOW),
-			"Already at latest change",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
-		)
-	}
-
 
 	run_command := os.Process_Desc {
 		command     = []string{bin_path},
@@ -88,20 +49,37 @@ handle_run :: proc(app_state: ^state.State) {
 	}
 
 	if !app_state.config.silent {
-		fmt.println(
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-			"     Running ",
-			cli.color_ansi(ansi.RESET),
-			"`",
-			project_name,
-			"`",
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-			"...",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
-		)
+		if app_state.config.release {
+			fmt.println(
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_GREEN),
+				"     Running ",
+				cli.color_ansi(ansi.RESET),
+				"`",
+				project_name,
+				"`",
+				cli.color_ansi(ansi.FAINT),
+				rebuild ? "" : " in release mode",
+				cli.color_ansi(ansi.RESET),
+				"...",
+				sep = "",
+			)
+		} else {
+			fmt.println(
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_GREEN),
+				"     Running ",
+				cli.color_ansi(ansi.RESET),
+				"`",
+				project_name,
+				"`",
+				cli.color_ansi(ansi.FAINT),
+				rebuild ? "" : " in debug mode",
+				cli.color_ansi(ansi.RESET),
+				"...",
+				sep = "",
+			)
+		}
 	}
 
 	run_process, exec_err := os.process_start(run_command)
@@ -120,4 +98,3 @@ handle_run :: proc(app_state: ^state.State) {
 	state, _ := os.process_wait(run_process)
 	os.exit(state.exit_code)
 }
-

@@ -47,11 +47,6 @@ Run_Options :: [?]Flag {
 		short = "-r",
 		desc = "Compile and run the project in release mode",
 	},
-	{
-		name = "--force",
-		short = "-f",
-		desc = "Force the compiler to recompile the project",
-	},
 	{name = "--silent", short = "-s", desc = "Silent the terminal output"},
 	{name = "--help", short = "-h", desc = "Show help message"},
 }

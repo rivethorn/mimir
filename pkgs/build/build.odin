@@ -70,14 +70,64 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 
 	output := fmt.tprintf("-out:%s", config.output)
 	release_mode := config.release ? "-o:speed" : "-o:none"
-	debug_mode := config.release ? "" : "-debug"
+	debug_flag := config.release ? "" : "-debug"
 	working_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		return .No_Working_Dir
 	}
 
+	bin_dir := fmt.tprintf(
+		"%s/bin/%s",
+		working_dir,
+		config.release ? "release" : "debug",
+	)
+	if err := os.make_directory(bin_dir); err != nil {
+		if !os.exists(bin_dir) {
+			fmt.eprintf(
+				"%sFailed%s to create directory %q: %v\n",
+				cli.color_ansi(ansi.FG_RED),
+				cli.color_ansi(ansi.RESET),
+				bin_dir,
+				err,
+			)
+			os.exit(1)
+		}
+	}
+
+	exe_extension := ""
+	when ODIN_OS == .Windows {
+		exe_extension = ".exe"
+	}
+
+	tmp := strings.split(working_dir, "/")
+	when ODIN_OS == .Windows {
+		tmp = strings.split(working_dir, "\\")
+	}
+	project_name := tmp[len(tmp) - 1]
+	bin_path := fmt.tprintf(
+		"%s/bin/%s/%s%s",
+		working_dir,
+		config.release ? "release" : "debug",
+		project_name,
+		exe_extension,
+	)
+
+	first_time := !os.exists(bin_path)
+
 	if !config.silent {
 		if config.release {
+			if !first_time {
+				fmt.println(
+					cli.color_ansi(ansi.BOLD),
+					cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
+					"Changes detected. ",
+					cli.color_ansi(ansi.RESET),
+					cli.color_ansi(ansi.FG_CYAN),
+					"Rebuilding project...",
+					cli.color_ansi(ansi.RESET),
+					sep = "",
+				)
+			}
 			fmt.println(
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -93,6 +143,18 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 				sep = "",
 			)
 		} else {
+			if !first_time {
+				fmt.println(
+					cli.color_ansi(ansi.BOLD),
+					cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
+					"Changes detected. ",
+					cli.color_ansi(ansi.RESET),
+					cli.color_ansi(ansi.FG_CYAN),
+					"Rebuilding project...",
+					cli.color_ansi(ansi.RESET),
+					sep = "",
+				)
+			}
 			fmt.println(
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -107,7 +169,6 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 				"...",
 				sep = "",
 			)
-
 		}
 	}
 
@@ -118,7 +179,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 			config.src_path,
 			output,
 			release_mode,
-			debug_mode,
+			debug_flag,
 		},
 		working_dir = working_dir,
 		stderr      = os.stderr,
@@ -168,7 +229,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	return .None
 }
 
-handle_build :: proc(app_state: ^state.State) {
+handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		fmt.eprintln(
@@ -178,6 +239,62 @@ handle_build :: proc(app_state: ^state.State) {
 			sep = "",
 		)
 		os.exit(1)
+	}
+
+	source_dir := fmt.tprintf("%s/src/", project_dir)
+	if !os.exists(source_dir) {
+		fmt.eprintln(
+			cli.color_ansi(ansi.FG_BRIGHT_RED),
+			"This directory does not contain a src/ directory, where are we?",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		os.exit(1)
+	}
+
+	tmp := strings.split(project_dir, "/")
+	when ODIN_OS == .Windows {
+		tmp = strings.split(project_dir, "\\")
+	}
+	project_name := tmp[len(tmp) - 1]
+	delete(tmp)
+
+	exe_extension := ""
+	when ODIN_OS == .Windows {
+		exe_extension = ".exe"
+	}
+
+	output: string
+	if app_state.config.release {
+		output = fmt.tprintf(
+			"%s/%s/%s%s",
+			"bin",
+			"release",
+			project_name,
+			exe_extension,
+		)
+	} else {
+		output = fmt.tprintf(
+			"%s/%s/%s%s",
+			"bin",
+			"debug",
+			project_name,
+			exe_extension,
+		)
+	}
+
+	if !needs_rebuild(source_dir, output) {
+		fmt.println(
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
+			"  No rebuild ",
+			cli.color_ansi(ansi.RESET),
+			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
+			"Already at latest change",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		return false
 	}
 
 	bin_dir := fmt.tprintf("%s/bin", project_dir)
@@ -194,49 +311,9 @@ handle_build :: proc(app_state: ^state.State) {
 		}
 	}
 
-	tmp := strings.split(project_dir, "/")
-	when ODIN_OS == .Windows {
-		tmp = strings.split(project_dir, "\\")
-	}
-	project_name := tmp[len(tmp) - 1]
-	delete(tmp)
-
-	exe_extension := ""
-	when ODIN_OS == .Windows {
-		exe_extension = ".exe"
-	}
-
-	output := fmt.tprintf("%s/%s%s", "bin", project_name, exe_extension)
-
 	app_state.config.name = project_name
 	app_state.config.src_path = "src"
 	app_state.config.output = output
-
-	source_dir := fmt.tprintf("%s/src/", project_dir)
-	if !os.exists(source_dir) {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"This directory does not contain a src/ directory, where are we?",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
-		)
-		os.exit(1)
-	}
-
-	if !app_state.config.force_recompile &&
-	   !app_state.config.release &&
-	   !needs_rebuild(source_dir, output) {
-		fmt.println(
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
-			"     No need ",
-			cli.color_ansi(ansi.FG_YELLOW),
-			"Already at latest change",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
-		)
-		return
-	}
 
 	walker := os.walker_create(source_dir)
 	files: [dynamic]string
@@ -273,5 +350,6 @@ handle_build :: proc(app_state: ^state.State) {
 		)
 		os.exit(1)
 	}
-}
 
+	return true
+}

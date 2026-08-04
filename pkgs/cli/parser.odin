@@ -45,8 +45,6 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.release = true
 			case "--silent", "-s":
 				app_state.config.silent = true
-			case "--force", "-f":
-				app_state.config.force_recompile = true
 			case:
 				print_run_unexpected_arg(os.args[i])
 				os.exit(1)

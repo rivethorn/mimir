@@ -16,9 +16,9 @@ Command :: enum {
 }
 
 Command_Config :: struct {
-	name, src_path, output:           string,
-	run_args:                         []string,
-	release, silent, force_recompile: bool,
+	name, src_path, output: string,
+	run_args:               []string,
+	release, silent:        bool,
 }
 
 State :: struct {

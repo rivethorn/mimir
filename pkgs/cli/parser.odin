@@ -10,19 +10,10 @@ state_init :: proc(app_state: ^state.State) {
 
 @(private = "file")
 set_main_command :: proc(app_state: ^state.State) {
-	switch os.args[1] {
-	case "help", "h":
-		app_state.command = .Help
-	case "version":
-		app_state.command = .Version
-	case "new":
-		app_state.command = .New
-	case "build", "b":
-		app_state.command = .Build
-	case "run", "r":
-		app_state.command = .Run
-	case:
-		app_state.command = .Error
+	for elem in Main_Commands {
+		if os.args[1] == elem.name || os.args[1] == elem.short {
+			app_state.command = elem.command
+		}
 	}
 }
 
@@ -63,4 +54,3 @@ set_config :: proc(app_state: ^state.State) {
 		}
 	}
 }
-

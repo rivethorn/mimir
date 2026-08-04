@@ -1,6 +1,7 @@
 package state
 
 Command :: enum {
+	Error,
 	Build,
 	Run,
 	New,
@@ -11,7 +12,6 @@ Command :: enum {
 	// Toolchain,
 	Version,
 	Help,
-	Error,
 }
 
 Command_Config :: struct {

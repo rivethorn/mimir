@@ -22,6 +22,11 @@ Main_Commands :: [?]Flag {
 		desc = "Compile and run the current project",
 	},
 	{command = .New, name = "new", desc = "Create a new Odin project"},
+	{
+		command = .Clean,
+		name = "clean",
+		desc = "Remove all built binaries and build artifacts",
+	},
 	{command = .Version, name = "version", desc = "Show Mimir's version"},
 	{command = .Help, name = "help", short = "h", desc = "Show help message"},
 }
@@ -50,4 +55,3 @@ Run_Options :: [?]Flag {
 	{name = "--silent", short = "-s", desc = "Silent the terminal output"},
 	{name = "--help", short = "-h", desc = "Show help message"},
 }
-

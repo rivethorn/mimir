@@ -7,12 +7,13 @@ package main
 import "core:fmt"
 import "core:os"
 import "pkgs:build"
+import "pkgs:clean"
 import "pkgs:cli"
 import "pkgs:new"
 import "pkgs:run"
 import "pkgs:state"
 
-VERSION := #config(VERSION, "0.4.0")
+VERSION := #config(VERSION, "0.5.0")
 
 main :: proc() {
 	if len(os.args) < 2 {
@@ -31,6 +32,8 @@ main :: proc() {
 		run.handle_run(&state)
 	case .New:
 		new.create()
+	case .Clean:
+		clean.handle_clean()
 	case .Version:
 		fmt.println("Mimir version", VERSION)
 	case .Help:
@@ -41,4 +44,3 @@ main :: proc() {
 		os.exit(1)
 	}
 }
-

@@ -5,6 +5,7 @@ Command :: enum {
 	Build,
 	Run,
 	New,
+	Clean,
 	// Add,
 	// Remove,
 	// Install,
@@ -24,4 +25,3 @@ State :: struct {
 	command: Command,
 	config:  Command_Config,
 }
-

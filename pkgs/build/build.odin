@@ -21,6 +21,7 @@ Build_Error :: enum {
 	Spawn_Failure,
 }
 
+@(private)
 get_collections :: proc(cwd: string) -> [dynamic]string {
 	config: Ols
 
@@ -56,49 +57,6 @@ get_collections :: proc(cwd: string) -> [dynamic]string {
 	}
 
 	return collections
-}
-
-needs_rebuild :: proc(source_path, binary_path: string) -> bool {
-	bin_info, bin_err := os.stat(binary_path, context.temp_allocator)
-	if bin_err != nil {
-		return true
-	}
-
-	src_info, src_err := os.stat(source_path, context.temp_allocator)
-	if src_err != nil {
-		fmt.eprintf("Source path error: %v\n", src_err)
-		return true
-	}
-
-	if !(src_info.type == .Directory) {
-		return(
-			src_info.modification_time._nsec >
-			bin_info.modification_time._nsec \
-		)
-	}
-
-	latest_src_mod := src_info.modification_time
-
-	fd, dir_err := os.open(source_path)
-	if dir_err != nil {
-		return true
-	}
-	defer os.close(fd)
-
-	infos, read_err := os.read_dir(fd, -1, context.temp_allocator)
-	if read_err != nil {
-		return true
-	}
-
-	for info in infos {
-		if filepath.ext(info.name) == ".odin" {
-			if info.modification_time._nsec > latest_src_mod._nsec {
-				latest_src_mod = info.modification_time
-			}
-		}
-	}
-
-	return latest_src_mod._nsec > bin_info.modification_time._nsec
 }
 
 @(private)
@@ -276,6 +234,50 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	return .None
 }
 
+needs_rebuild :: proc(source_path, binary_path: string) -> bool {
+	bin_info, bin_err := os.stat(binary_path, context.temp_allocator)
+	if bin_err != nil {
+		return true
+	}
+
+	src_info, src_err := os.stat(source_path, context.temp_allocator)
+	if src_err != nil {
+		fmt.eprintf("Source path error: %v\n", src_err)
+		return true
+	}
+
+	if !(src_info.type == .Directory) {
+		return(
+			src_info.modification_time._nsec >
+			bin_info.modification_time._nsec \
+		)
+	}
+
+	latest_src_mod := src_info.modification_time
+
+	fd, dir_err := os.open(source_path)
+	if dir_err != nil {
+		return true
+	}
+	defer os.close(fd)
+
+	infos, read_err := os.read_dir(fd, -1, context.temp_allocator)
+	if read_err != nil {
+		return true
+	}
+
+	for info in infos {
+		if filepath.ext(info.name) == ".odin" {
+			if info.modification_time._nsec > latest_src_mod._nsec {
+				latest_src_mod = info.modification_time
+			}
+		}
+	}
+
+	return latest_src_mod._nsec > bin_info.modification_time._nsec
+}
+
+@(private)
 handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {

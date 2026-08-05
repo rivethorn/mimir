@@ -11,9 +11,9 @@ state_init :: proc(app_state: ^state.State) {
 
 @(private = "file")
 set_main_command :: proc(app_state: ^state.State) {
-	for elem in Main_Commands {
-		if os.args[1] == elem.name || os.args[1] == elem.short {
-			app_state.command = elem.command
+	for opt in Main_Commands {
+		if os.args[1] == opt.name || os.args[1] == opt.short {
+			app_state.command = opt.command
 		}
 	}
 }

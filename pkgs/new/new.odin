@@ -9,7 +9,6 @@ import "pkgs:cli"
 create :: proc() {
 	project_name := os.args[2]
 
-	// Basic validation
 	if len(project_name) == 0 ||
 	   strings.contains_any(project_name, `\/:*?"<>|`) ||
 	   project_name == "." ||
@@ -25,7 +24,6 @@ create :: proc() {
 
 	project_dir := project_name
 
-	// Don't replace existing one
 	if os.exists(project_dir) {
 		fmt.eprintf(
 			"%s%sWARNING%s: A project named %q aleadey exists in the current directory\n",
@@ -37,7 +35,6 @@ create :: proc() {
 		os.exit(1)
 	}
 
-	// Create project directory
 	if err := os.make_directory(project_dir); err != nil {
 		if !os.exists(project_dir) {
 			fmt.eprintf(
@@ -51,7 +48,6 @@ create :: proc() {
 		}
 	}
 
-	// Create pkgs directory
 	pkgs_dir := fmt.tprintf("%s/pkgs", project_dir)
 	if err := os.make_directory(pkgs_dir); err != nil {
 		if !os.exists(pkgs_dir) {
@@ -66,7 +62,6 @@ create :: proc() {
 		}
 	}
 
-	// Create src/main.odin
 	src_dir := fmt.tprintf("%s/src", project_dir)
 	if err := os.make_directory(src_dir); err != nil {
 		if !os.exists(src_dir) {
@@ -94,7 +89,6 @@ create :: proc() {
 		os.exit(1)
 	}
 
-	// Create README.md
 	readme_path := fmt.tprintf("%s/README.md", project_dir)
 	readme_content := fmt.tprintf(
 		"# %s\n\nA new Odin project.\n\n## Build\n\n`odin build .`\nThen\n`./%s`\n\n## Run\n\n`odin run .`",
@@ -112,7 +106,6 @@ create :: proc() {
 		os.exit(1)
 	}
 
-	// Create ols.json
 	ols_path := fmt.tprintf("%s/ols.json", project_dir)
 	if err := os.write_entire_file(ols_path, transmute([]u8)OLS_FILE_CONTENT);
 	   err != nil {
@@ -125,7 +118,6 @@ create :: proc() {
 		os.exit(1)
 	}
 
-	// Create odinfmt.json
 	odinfmt_path := fmt.tprintf("%s/odinfmt.json", project_dir)
 	if err := os.write_entire_file(
 		odinfmt_path,
@@ -140,7 +132,6 @@ create :: proc() {
 		os.exit(1)
 	}
 
-	// Create .gitignore
 	gitignore_path := fmt.tprintf("%s/.gitignore", project_dir)
 	gitignore_content := fmt.tprintf("%s\n", GITIG_FILE_CONTENT, project_name)
 	if err := os.write_entire_file(
@@ -156,7 +147,6 @@ create :: proc() {
 		os.exit(1)
 	}
 
-	// Initialize git repo
 	if _, err := os.process_start({command = {"git", "init"}}); err != nil {
 		fmt.eprintf(
 			"%sFailed%s to initialize git repo: %v\n",
@@ -182,4 +172,3 @@ create :: proc() {
 		project_name,
 	)
 }
-

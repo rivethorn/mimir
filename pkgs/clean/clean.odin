@@ -2,7 +2,6 @@ package clean
 
 import "core:fmt"
 import "core:os"
-import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
 

@@ -1,5 +1,7 @@
+#+feature dynamic-literals
 package build
 
+import "core:encoding/json"
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
@@ -17,6 +19,43 @@ Build_Error :: enum {
 	No_Working_Dir,
 	Compilation_Failure,
 	Spawn_Failure,
+}
+
+get_collections :: proc(cwd: string) -> [dynamic]string {
+	config: Ols
+
+	file_path := fmt.tprintf("%s/ols.json", cwd)
+
+	config_file, err := os.read_entire_file("ols.json", context.temp_allocator)
+	if err != nil {
+		fmt.eprintf(
+			"%sFailed%s to read ols.json file: %v\n",
+			cli.color_ansi(ansi.FG_RED),
+			cli.color_ansi(ansi.RESET),
+			err,
+		)
+		os.exit(1)
+	}
+
+	json_err := json.unmarshal(config_file, &config)
+	if json_err != nil {
+		fmt.eprintf(
+			"%sFailed%s to parse ols.json: %v\n",
+			cli.color_ansi(ansi.FG_RED),
+			cli.color_ansi(ansi.RESET),
+			err,
+		)
+		os.exit(1)
+	}
+
+	collections := make([dynamic]string)
+
+	for col in config.collections {
+		current := fmt.tprintf("-collection:%s=%s", col.name, col.path)
+		append(&collections, current)
+	}
+
+	return collections
 }
 
 needs_rebuild :: proc(source_path, binary_path: string) -> bool {
@@ -112,6 +151,9 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 		exe_extension,
 	)
 
+	collections := get_collections(working_dir)
+	defer delete(collections)
+
 	first_time := !os.exists(bin_path)
 
 	if !config.silent {
@@ -172,15 +214,20 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 		}
 	}
 
+	command := [dynamic]string {
+		"odin",
+		"build",
+		config.src_path,
+		output,
+		release_mode,
+		debug_flag,
+	}
+	defer delete(command)
+
+	append(&command, ..collections[:])
+
 	build_command := os.Process_Desc {
-		command     = []string {
-			"odin",
-			"build",
-			config.src_path,
-			output,
-			release_mode,
-			debug_flag,
-		},
+		command     = command[:],
 		working_dir = working_dir,
 		stderr      = os.stderr,
 		stdout      = os.stdout,

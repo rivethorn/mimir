@@ -1,8 +1,11 @@
+#+private
 package build
 
-@(private)
-Build_Config :: struct {
-	name, path, output: string,
-	release, silent:    bool,
+Collection :: struct {
+	name: string,
+	path: string,
 }
 
+Ols :: struct {
+	collections: []Collection,
+}

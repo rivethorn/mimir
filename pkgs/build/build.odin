@@ -234,6 +234,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	return .None
 }
 
+@(private)
 needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 	bin_info, bin_err := os.stat(binary_path, context.temp_allocator)
 	if bin_err != nil {
@@ -277,7 +278,6 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 	return latest_src_mod._nsec > bin_info.modification_time._nsec
 }
 
-@(private)
 handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {

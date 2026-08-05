@@ -5,7 +5,7 @@ import "core:os"
 import "core:strings"
 import an "core:terminal/ansi"
 
-print_run_unexpected_arg :: proc(arg: string) {
+print_run_unexpected_arg :: proc(arg: string, arg_tip: bool) {
 	fmt.eprintln(
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
@@ -13,6 +13,23 @@ print_run_unexpected_arg :: proc(arg: string) {
 		color_ansi(an.RESET),
 		arg,
 		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		" note: ",
+		color_ansi(an.RESET),
+		"to pass '",
+		color_ansi(an.FG_YELLOW),
+		arg,
+		color_ansi(an.RESET),
+		"' as an argument to your binary, use '",
+		color_ansi(an.FG_BRIGHT_BLUE),
+		"-- ",
+		arg,
+		color_ansi(an.RESET),
+		"'\n",
 		sep = "",
 	)
 	fmt.eprintln(
@@ -266,4 +283,3 @@ unknown_command :: proc() {
 		os.args[1],
 	)
 }
-

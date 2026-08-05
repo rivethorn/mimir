@@ -41,8 +41,12 @@ handle_run :: proc(app_state: ^state.State) {
 		exe_extension,
 	)
 
+	command := make([dynamic]string)
+	append(&command, bin_path)
+	append(&command, ..app_state.config.run_args)
+
 	run_command := os.Process_Desc {
-		command     = []string{bin_path},
+		command     = command[:],
 		working_dir = project_dir,
 		stdout      = os.stdout,
 		stderr      = os.stderr,
@@ -92,9 +96,11 @@ handle_run :: proc(app_state: ^state.State) {
 			exec_err,
 			sep = "",
 		)
+		delete(command)
 		os.exit(1)
 	}
 
 	state, _ := os.process_wait(run_process)
+	delete(command)
 	os.exit(state.exit_code)
 }

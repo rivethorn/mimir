@@ -1,6 +1,7 @@
 package cli
 
 import "core:os"
+import "core:strings"
 import "pkgs:state"
 
 state_init :: proc(app_state: ^state.State) {
@@ -36,7 +37,7 @@ set_config :: proc(app_state: ^state.State) {
 			}
 		}
 	case .Run:
-		for i := 2; i < len(os.args); i += 1 {
+		outer_for: for i := 2; i < len(os.args); i += 1 {
 			switch os.args[i] {
 			case "--help", "-h":
 				print_run_usage()
@@ -45,9 +46,21 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.release = true
 			case "--silent", "-s":
 				app_state.config.silent = true
+			case "--":
+				if len(os.args) > 3 {
+					app_state.config.run_args = os.args[i + 1:len(os.args)]
+				}
+				break outer_for
 			case:
-				print_run_unexpected_arg(os.args[i])
-				os.exit(1)
+				if strings.starts_with(os.args[i], "-") {
+					print_run_unexpected_arg(os.args[i], false)
+					os.exit(1)
+				}
+				if strings.starts_with(os.args[i], "--") {
+					print_run_unexpected_arg(os.args[i], true)
+					os.exit(1)
+				}
+				app_state.config.run_args = os.args[i:len(os.args)]
 			}
 		}
 	}

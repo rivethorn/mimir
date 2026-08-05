@@ -283,7 +283,7 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 		)
 	}
 
-	if !needs_rebuild(source_dir, output) {
+	if !app_state.config.silent && !needs_rebuild(source_dir, output) {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),

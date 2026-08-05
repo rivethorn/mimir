@@ -15,23 +15,25 @@ print_run_unexpected_arg :: proc(arg: string, arg_tip: bool) {
 		"\n",
 		sep = "",
 	)
-	fmt.eprintln(
-		color_ansi(an.BOLD),
-		color_ansi(an.FG_BRIGHT_CYAN),
-		" note: ",
-		color_ansi(an.RESET),
-		"to pass '",
-		color_ansi(an.FG_YELLOW),
-		arg,
-		color_ansi(an.RESET),
-		"' as an argument to your binary, use '",
-		color_ansi(an.FG_BRIGHT_BLUE),
-		"-- ",
-		arg,
-		color_ansi(an.RESET),
-		"'\n",
-		sep = "",
-	)
+	if arg_tip {
+		fmt.eprintln(
+			color_ansi(an.BOLD),
+			color_ansi(an.FG_BRIGHT_CYAN),
+			" note: ",
+			color_ansi(an.RESET),
+			"to pass '",
+			color_ansi(an.FG_YELLOW),
+			arg,
+			color_ansi(an.RESET),
+			"' as an argument to your binary, use '",
+			color_ansi(an.FG_BRIGHT_BLUE),
+			"-- ",
+			arg,
+			color_ansi(an.RESET),
+			"'\n",
+			sep = "",
+		)
+	}
 	fmt.eprintln(
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),

@@ -211,6 +211,135 @@ print_build_usage :: proc(output := os.stdout) {
 	}
 }
 
+print_new_arg_err :: proc() {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		"Expected project name",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Usage: ",
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		"new ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"<project-name>",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
+}
+
+print_new_name_help :: proc() {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_YELLOW),
+		"Too many arguments ",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	args_arr := os.args[2:len(os.args)]
+	args_str, _ := strings.join(args_arr, " ", context.temp_allocator)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		" note: ",
+		color_ansi(an.RESET),
+		"did you mean ",
+		color_ansi(an.FG_BRIGHT_BLUE),
+		"\"",
+		args_str,
+		"\"",
+		color_ansi(an.RESET),
+		"?",
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
+}
+
+print_new_usage :: proc(output := os.stdout) {
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		color_ansi(an.FG_BRIGHT_BLUE),
+		"new ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_BLUE),
+		"<project-name>",
+		color_ansi(an.RESET),
+		sep = "",
+	)
+	fmt.println("Creates a new Odin project\n")
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Options:",
+		sep = "",
+	)
+	// First pass: find the widest command name (including the short
+	// flag suffix) so the descriptions all line up in the output.
+	max_width := 0
+	for flag in New_Options {
+		width := len(flag.name)
+		if flag.short != "" {
+			width += len(flag.short) + 2 // ", " + short
+		}
+		if width > max_width {
+			max_width = width
+		}
+	}
+
+	// Second pass: print each command, padded to max_width plus a
+	// small gap before the description.
+	for flag in New_Options {
+		name := flag.name
+		if flag.short != "" {
+			name = fmt.tprintf("%s, %s", flag.name, flag.short)
+		}
+
+		padding := strings.repeat(" ", max_width - len(name) + 2)
+
+		fmt.fprintf(
+			output,
+			"    %s%s%s%s%s%s\n",
+			color_ansi(an.BOLD),
+			color_ansi(an.FG_BRIGHT_CYAN),
+			name,
+			color_ansi(an.RESET),
+			padding,
+			flag.desc,
+		)
+	}
+}
+
 print_general_usage :: proc(output := os.stdout) {
 	fmt.fprintln(output, "Mimir - Odin's toolchain\n")
 	fmt.fprint(

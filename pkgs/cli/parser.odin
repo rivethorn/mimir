@@ -63,5 +63,24 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.run_args = os.args[i:len(os.args)]
 			}
 		}
+	case .New:
+		if len(os.args) < 3 {
+			print_new_arg_err()
+			os.exit(1)
+		}
+
+		if len(os.args) > 3 {
+			print_new_name_help()
+			os.exit(1)
+		}
+
+		for i := 2; i < len(os.args); i += 1 {
+			switch os.args[i] {
+			case "--help", "-h":
+				print_new_usage()
+				os.exit(0)
+			}
+		}
+
 	}
 }

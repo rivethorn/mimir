@@ -9,17 +9,55 @@ import "pkgs:cli"
 create :: proc() {
 	project_name := os.args[2]
 
-	if len(project_name) == 0 ||
-	   strings.contains_any(project_name, `\/:*?"<>|`) ||
+	if strings.contains_any(project_name, `\/:*?"<>|`) ||
+	   strings.starts_with(project_name, "-") ||
+	   strings.starts_with(project_name, "--") ||
 	   project_name == "." ||
 	   project_name == ".." {
 		fmt.eprintf(
-			"%s%sERROR%s: Invalid project name\n",
+			"%s%sERROR%s: Invalid project name '%s%s%s'\n",
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_RED),
 			cli.color_ansi(ansi.RESET),
+			cli.color_ansi(ansi.FG_YELLOW),
+			project_name,
+			cli.color_ansi(ansi.RESET),
 		)
 		os.exit(1)
+	}
+
+	if strings.contains(project_name, " ") {
+		name_arr, err := strings.split(
+			project_name,
+			" ",
+			context.temp_allocator,
+		)
+		if err != nil {
+			fmt.eprintf(
+				"%s%sERROR%s: failed to parse project name\n",
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_RED),
+				cli.color_ansi(ansi.RESET),
+			)
+			os.exit(1)
+		}
+
+		clean_name, cn_err := strings.join(
+			name_arr,
+			"-",
+			context.temp_allocator,
+		)
+		if cn_err != nil {
+			fmt.eprintf(
+				"%s%sERROR%s: failed to parse project name\n",
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_RED),
+				cli.color_ansi(ansi.RESET),
+			)
+			os.exit(1)
+		}
+
+		project_name = clean_name
 	}
 
 	project_dir := project_name

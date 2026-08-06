@@ -2,6 +2,7 @@ package run
 
 import "core:fmt"
 import "core:os"
+import "core:path/filepath"
 import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:build"
@@ -33,12 +34,15 @@ handle_run :: proc(app_state: ^state.State) {
 		tmp = strings.split(project_dir, "\\")
 	}
 	project_name := tmp[len(tmp) - 1]
-	bin_path := fmt.tprintf(
-		"%s/bin/%s/%s%s",
-		project_dir,
-		app_state.config.release ? "release" : "debug",
-		project_name,
-		exe_extension,
+	bin_path, _ := filepath.join(
+		{
+			project_dir,
+			"bin",
+			app_state.config.release ? "release" : "debug",
+			project_name,
+			exe_extension,
+		},
+		context.temp_allocator,
 	)
 
 	command := make([dynamic]string)

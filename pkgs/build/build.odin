@@ -25,8 +25,6 @@ Build_Error :: enum {
 get_collections :: proc(cwd: string) -> [dynamic]string {
 	config: Ols
 
-	file_path := fmt.tprintf("%s/ols.json", cwd)
-
 	config_file, err := os.read_entire_file("ols.json", context.temp_allocator)
 	if err != nil {
 		fmt.eprintf(
@@ -73,10 +71,9 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 		return .No_Working_Dir
 	}
 
-	bin_dir := fmt.tprintf(
-		"%s/bin/%s",
-		working_dir,
-		config.release ? "release" : "debug",
+	bin_dir, _ := filepath.join(
+		{working_dir, "bin", config.release ? "release" : "debug"},
+		context.temp_allocator,
 	)
 	if err := os.make_directory(bin_dir); err != nil {
 		if !os.exists(bin_dir) {
@@ -101,12 +98,15 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 		tmp = strings.split(working_dir, "\\")
 	}
 	project_name := tmp[len(tmp) - 1]
-	bin_path := fmt.tprintf(
-		"%s/bin/%s/%s%s",
-		working_dir,
-		config.release ? "release" : "debug",
-		project_name,
-		exe_extension,
+	bin_path, _ := filepath.join(
+		{
+			working_dir,
+			"bin",
+			config.release ? "release" : "debug",
+			project_name,
+			exe_extension,
+		},
+		context.temp_allocator,
 	)
 
 	collections := get_collections(working_dir)
@@ -279,6 +279,14 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 }
 
 handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
+	if !util.is_odin_project() {
+		fmt.eprintln(
+			"Current directory does not contain a valid Odin project for Mimir to work with.",
+		)
+
+		os.exit(1)
+	}
+
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		fmt.eprintln(
@@ -290,16 +298,10 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 		os.exit(1)
 	}
 
-	source_dir := fmt.tprintf("%s/src/", project_dir)
-	if !os.exists(source_dir) {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"This directory does not contain a src/ directory, where are we?",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
-		)
-		os.exit(1)
-	}
+	source_dir, _ := filepath.join(
+		{project_dir, "src"},
+		context.temp_allocator,
+	)
 
 	tmp := strings.split(project_dir, "/")
 	when ODIN_OS == .Windows {
@@ -315,20 +317,14 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 
 	output: string
 	if app_state.config.release {
-		output = fmt.tprintf(
-			"%s/%s/%s%s",
-			"bin",
-			"release",
-			project_name,
-			exe_extension,
+		output, _ = filepath.join(
+			{"bin", "release", project_name, exe_extension},
+			context.temp_allocator,
 		)
 	} else {
-		output = fmt.tprintf(
-			"%s/%s/%s%s",
-			"bin",
-			"debug",
-			project_name,
-			exe_extension,
+		output, _ = filepath.join(
+			{"bin", "debug", project_name, exe_extension},
+			context.temp_allocator,
 		)
 	}
 
@@ -346,7 +342,7 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 		return false
 	}
 
-	bin_dir := fmt.tprintf("%s/bin", project_dir)
+	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
 	if err := os.make_directory(bin_dir); err != nil {
 		if !os.exists(bin_dir) {
 			fmt.eprintf(
@@ -363,29 +359,6 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 	app_state.config.name = project_name
 	app_state.config.src_path = "src"
 	app_state.config.output = output
-
-	walker := os.walker_create(source_dir)
-	files: [dynamic]string
-	defer delete(files)
-
-	for info in os.walker_walk(&walker) {
-		if strings.has_suffix(info.fullpath, ".odin") {
-			append(&files, info.name)
-			continue
-		}
-	}
-
-	os.walker_destroy(&walker)
-
-	if len(files) == 0 {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"This directory does not contain a valid Odin project",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
-		)
-		os.exit(1)
-	}
 
 	build_err := start_build(&app_state.config)
 	if build_err != nil {

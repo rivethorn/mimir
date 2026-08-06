@@ -129,6 +129,8 @@ set_config :: proc(app_state: ^state.State) {
 			case "--help", "-h":
 				print_remove_usage()
 				os.exit(0)
+			case "--dry-run", "-d":
+				app_state.config.dry_run = true
 			case:
 				app_state.config.pkg_name = os.args[i]
 			}

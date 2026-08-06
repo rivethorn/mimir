@@ -29,7 +29,27 @@ handle_remove :: proc(app_state: ^state.State) {
 	}
 
 	if app_state.config.dry_run {
-		// TODO:
+		if pkg_name == "" {
+			fmt.printfln(
+				"%s%sNothing to do!%s",
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_CYAN),
+				cli.color_ansi(ansi.RESET),
+			)
+
+			os.exit(0)
+		}
+
+		fmt.printfln(
+			"%s%sWould%s remove '%s%s%s' directory",
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
+			cli.color_ansi(ansi.RESET),
+			cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
+			pkg_path,
+			cli.color_ansi(ansi.RESET),
+		)
+
 		os.exit(0)
 	}
 

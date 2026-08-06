@@ -11,10 +11,11 @@ import "pkgs:build"
 import "pkgs:clean"
 import "pkgs:cli"
 import "pkgs:new"
+import "pkgs:remove"
 import "pkgs:run"
 import "pkgs:state"
 
-VERSION := #config(VERSION, "0.6.0")
+VERSION := #config(VERSION, "0.7.0")
 
 main :: proc() {
 	if len(os.args) < 2 {
@@ -35,6 +36,8 @@ main :: proc() {
 		new.create()
 	case .Add:
 		add.handle_add(&state)
+	case .Remove:
+		remove.handle_remove(&state)
 	case .Clean:
 		clean.handle_clean()
 	case .Version:

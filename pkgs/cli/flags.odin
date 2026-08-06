@@ -28,6 +28,11 @@ Main_Commands :: [?]Flag {
 		desc = "Add a package to your project from URL",
 	},
 	{
+		command = .Remove,
+		name = "remove",
+		desc = "Remove a package from your project",
+	},
+	{
 		command = .Clean,
 		name = "clean",
 		desc = "Remove all built binaries and build artifacts",
@@ -62,5 +67,9 @@ New_Options :: [?]Flag {
 
 Add_Options :: [?]Flag {
 	{name = "--name", desc = "Custom name for the package"},
+	{name = "--help", short = "-h", desc = "Show help message"},
+}
+
+Remove_Options :: [?]Flag {
 	{name = "--help", short = "-h", desc = "Show help message"},
 }

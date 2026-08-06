@@ -94,7 +94,7 @@ set_config :: proc(app_state: ^state.State) {
 				os.exit(0)
 			case "--name":
 				if len(os.args) == i + 2 {
-					app_state.config.pkg_name = os.args[i + 1]
+					app_state.config.name = os.args[i + 1]
 				} else {
 					print_add_name_err()
 					os.exit(1)
@@ -114,8 +114,8 @@ set_config :: proc(app_state: ^state.State) {
 					print_add_url_err()
 					os.exit(1)
 				}
-				app_state.config.pkg_name = arr[len(arr) - 1]
-				app_state.config.pkg_url = os.args[i]
+				app_state.config.name = arr[len(arr) - 1]
+				app_state.config.url = os.args[i]
 			}
 		}
 	case .Remove:
@@ -132,7 +132,7 @@ set_config :: proc(app_state: ^state.State) {
 			case "--dry-run", "-d":
 				app_state.config.dry_run = true
 			case:
-				app_state.config.pkg_name = os.args[i]
+				app_state.config.name = os.args[i]
 			}
 		}
 	case .Clean:

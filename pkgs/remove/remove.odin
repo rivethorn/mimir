@@ -8,7 +8,7 @@ import "pkgs:cli"
 import "pkgs:state"
 
 handle_remove :: proc(app_state: ^state.State) {
-	pkg_name := app_state.config.pkg_name
+	pkg_name := app_state.config.name
 	cwd, _ := os.get_working_directory(context.temp_allocator)
 	pkg_path, _ := filepath.join(
 		{cwd, "pkgs", pkg_name},

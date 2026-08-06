@@ -105,9 +105,9 @@ handle_add :: proc(app_state: ^state.State) {
 
 	os.make_directory(tmp)
 
-	pkg_name := app_state.config.pkg_name
+	pkg_name := app_state.config.name
 
-	clone_repo(app_state.config.pkg_url, pkg_name, tmp)
+	clone_repo(app_state.config.url, pkg_name, tmp)
 
 	tmp_path, _ := filepath.join({tmp, pkg_name}, context.temp_allocator)
 	cwd, err := os.get_working_directory(context.temp_allocator)

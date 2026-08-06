@@ -39,7 +39,7 @@ main :: proc() {
 	case .Remove:
 		remove.handle_remove(&state)
 	case .Clean:
-		clean.handle_clean()
+		clean.handle_clean(&state)
 	case .Version:
 		fmt.println("Mimir version", VERSION)
 	case .Help:

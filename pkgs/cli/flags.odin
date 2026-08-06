@@ -73,3 +73,12 @@ Add_Options :: [?]Flag {
 Remove_Options :: [?]Flag {
 	{name = "--help", short = "-h", desc = "Show help message"},
 }
+
+Clean_Options :: [?]Flag {
+	{
+		name = "--dry-run",
+		short = "-d",
+		desc = "See what would happen without changing anything",
+	},
+	{name = "--help", short = "-h", desc = "Show help message"},
+}

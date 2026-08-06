@@ -133,5 +133,18 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.pkg_name = os.args[i]
 			}
 		}
+	case .Clean:
+		for i := 2; i < len(os.args); i += 1 {
+			switch os.args[i] {
+			case "--help", "-h":
+				print_clean_usage()
+				os.exit(0)
+			case "--dry-run", "-d":
+				app_state.config.dry_run = true
+			case:
+				print_clean_unexpected_arg(os.args[i])
+				os.exit(1)
+			}
+		}
 	}
 }

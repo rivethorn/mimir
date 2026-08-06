@@ -279,14 +279,6 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 }
 
 handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
-	if !util.is_odin_project() {
-		fmt.eprintln(
-			"Current directory does not contain a valid Odin project for Mimir to work with.",
-		)
-
-		os.exit(1)
-	}
-
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		fmt.eprintln(

@@ -14,12 +14,21 @@ import "pkgs:new"
 import "pkgs:remove"
 import "pkgs:run"
 import "pkgs:state"
+import "pkgs:util"
 
-VERSION := #config(VERSION, "0.7.0")
+VERSION := #config(VERSION, "0.8.1")
 
 main :: proc() {
 	if len(os.args) < 2 {
 		cli.print_general_usage(os.stderr)
+		os.exit(1)
+	}
+
+	if !util.is_odin_project() {
+		fmt.eprintln(
+			"Current directory does not contain a valid Odin project for Mimir to work with.",
+		)
+
 		os.exit(1)
 	}
 

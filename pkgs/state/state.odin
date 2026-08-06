@@ -8,7 +8,7 @@ Command :: enum {
 	Clean,
 	Add,
 	Remove,
-	// List,
+	List,
 	// Update,
 	// Install,
 	// Uninstall,

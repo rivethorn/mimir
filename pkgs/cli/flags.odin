@@ -33,6 +33,11 @@ Main_Commands :: [?]Flag {
 		desc = "Remove a package from your project",
 	},
 	{
+		command = .List,
+		name = "list",
+		desc = "List all packages inside the project",
+	},
+	{
 		command = .Clean,
 		name = "clean",
 		desc = "Remove all built binaries and build artifacts",
@@ -76,6 +81,10 @@ Remove_Options :: [?]Flag {
 		short = "-d",
 		desc = "See what would happen without changing anything",
 	},
+	{name = "--help", short = "-h", desc = "Show help message"},
+}
+
+List_Options :: [?]Flag {
 	{name = "--help", short = "-h", desc = "Show help message"},
 }
 

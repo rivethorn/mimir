@@ -135,6 +135,17 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.name = os.args[i]
 			}
 		}
+	case .List:
+		for i := 2; i < len(os.args); i += 1 {
+			switch os.args[i] {
+			case "--help", "-h":
+				print_list_usage()
+				os.exit(0)
+			case:
+				print_list_usage(os.stderr)
+				os.exit(1)
+			}
+		}
 	case .Clean:
 		for i := 2; i < len(os.args); i += 1 {
 			switch os.args[i] {

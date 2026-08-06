@@ -577,7 +577,7 @@ print_remove_usage :: proc(output := os.stdout) {
 		"remove ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-url> ",
+		"<package-name> ",
 		color_ansi(an.FG_BLUE),
 		"[OPTIONS]",
 		color_ansi(an.RESET),
@@ -610,6 +610,100 @@ print_remove_usage :: proc(output := os.stdout) {
 	// Second pass: print each command, padded to max_width plus a
 	// small gap before the description.
 	for flag in Remove_Options {
+		name := flag.name
+		if flag.short != "" {
+			name = fmt.tprintf("%s, %s", flag.name, flag.short)
+		}
+
+		padding := strings.repeat(" ", max_width - len(name) + 2)
+
+		fmt.fprintf(
+			output,
+			"    %s%s%s%s%s%s\n",
+			color_ansi(an.BOLD),
+			color_ansi(an.FG_BRIGHT_CYAN),
+			name,
+			color_ansi(an.RESET),
+			padding,
+			flag.desc,
+		)
+	}
+}
+
+print_update_arg_err :: proc() {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		"Expected package name",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Usage: ",
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		"update ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"<package-name>",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
+}
+
+print_update_usage :: proc(output := os.stdout) {
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		color_ansi(an.FG_BRIGHT_BLUE),
+		"update ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"<package-name> ",
+		color_ansi(an.FG_BLUE),
+		"[OPTIONS]",
+		color_ansi(an.RESET),
+		sep = "",
+	)
+	fmt.fprintln(output, "Updates a package using the upstream URL\n")
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Options:",
+		sep = "",
+	)
+	// First pass: find the widest command name (including the short
+	// flag suffix) so the descriptions all line up in the output.
+	max_width := 0
+	for flag in Update_Options {
+		width := len(flag.name)
+		if flag.short != "" {
+			width += len(flag.short) + 2 // ", " + short
+		}
+		if width > max_width {
+			max_width = width
+		}
+	}
+
+	// Second pass: print each command, padded to max_width plus a
+	// small gap before the description.
+	for flag in Update_Options {
 		name := flag.name
 		if flag.short != "" {
 			name = fmt.tprintf("%s, %s", flag.name, flag.short)

@@ -33,6 +33,11 @@ Main_Commands :: [?]Flag {
 		desc = "Remove a package from your project",
 	},
 	{
+		command = .Update,
+		name = "update",
+		desc = "Update a package from upstream",
+	},
+	{
 		command = .List,
 		name = "list",
 		desc = "List all packages inside the project",
@@ -76,6 +81,15 @@ Add_Options :: [?]Flag {
 }
 
 Remove_Options :: [?]Flag {
+	{
+		name = "--dry-run",
+		short = "-d",
+		desc = "See what would happen without changing anything",
+	},
+	{name = "--help", short = "-h", desc = "Show help message"},
+}
+
+Update_Options :: [?]Flag {
 	{
 		name = "--dry-run",
 		short = "-d",

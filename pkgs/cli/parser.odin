@@ -135,6 +135,23 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.name = os.args[i]
 			}
 		}
+	case .Update:
+		if len(os.args) < 3 {
+			print_update_arg_err()
+			os.exit(1)
+		}
+
+		for i := 2; i < len(os.args); i += 1 {
+			switch os.args[i] {
+			case "--help", "-h":
+				print_update_usage()
+				os.exit(0)
+			case "--dry-run", "-d":
+				app_state.config.dry_run = true
+			case:
+				app_state.config.name = os.args[i]
+			}
+		}
 	case .List:
 		for i := 2; i < len(os.args); i += 1 {
 			switch os.args[i] {

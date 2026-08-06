@@ -23,6 +23,11 @@ Main_Commands :: [?]Flag {
 	},
 	{command = .New, name = "new", desc = "Create a new Odin project"},
 	{
+		command = .Add,
+		name = "add",
+		desc = "Add a package to your project from URL",
+	},
+	{
 		command = .Clean,
 		name = "clean",
 		desc = "Remove all built binaries and build artifacts",
@@ -48,5 +53,14 @@ Run_Options :: [?]Flag {
 		desc = "Compile and run the project in release mode",
 	},
 	{name = "--silent", short = "-s", desc = "Silent the terminal output"},
+	{name = "--help", short = "-h", desc = "Show help message"},
+}
+
+New_Options :: [?]Flag {
+	{name = "--help", short = "-h", desc = "Show help message"},
+}
+
+Add_Options :: [?]Flag {
+	{name = "--name", desc = "Custom name for the package"},
 	{name = "--help", short = "-h", desc = "Show help message"},
 }

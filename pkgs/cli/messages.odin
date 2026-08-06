@@ -73,7 +73,10 @@ print_run_usage :: proc(output := os.stdout) {
 		color_ansi(an.RESET),
 		sep = "",
 	)
-	fmt.println("Compiles (if there are changes) and runs the project\n")
+	fmt.fprintln(
+		output,
+		"Compiles (if there are changes) and runs the project\n",
+	)
 	fmt.fprintln(
 		output,
 		color_ansi(an.BOLD),
@@ -167,7 +170,7 @@ print_build_usage :: proc(output := os.stdout) {
 		color_ansi(an.RESET),
 		sep = "",
 	)
-	fmt.println("Compiles the project if there are any changes\n")
+	fmt.fprintln(output, "Compiles the project if there are any changes\n")
 	fmt.fprintln(
 		output,
 		color_ansi(an.BOLD),
@@ -296,7 +299,7 @@ print_new_usage :: proc(output := os.stdout) {
 		color_ansi(an.RESET),
 		sep = "",
 	)
-	fmt.println("Creates a new Odin project\n")
+	fmt.fprintln(output, "Creates a new Odin project\n")
 	fmt.fprintln(
 		output,
 		color_ansi(an.BOLD),
@@ -320,6 +323,196 @@ print_new_usage :: proc(output := os.stdout) {
 	// Second pass: print each command, padded to max_width plus a
 	// small gap before the description.
 	for flag in New_Options {
+		name := flag.name
+		if flag.short != "" {
+			name = fmt.tprintf("%s, %s", flag.name, flag.short)
+		}
+
+		padding := strings.repeat(" ", max_width - len(name) + 2)
+
+		fmt.fprintf(
+			output,
+			"    %s%s%s%s%s%s\n",
+			color_ansi(an.BOLD),
+			color_ansi(an.FG_BRIGHT_CYAN),
+			name,
+			color_ansi(an.RESET),
+			padding,
+			flag.desc,
+		)
+	}
+}
+
+print_add_arg_err :: proc() {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		"Expected package URL",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Usage: ",
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		"add ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"<package-url> ",
+		color_ansi(an.FG_BLUE),
+		"[OPTIONS]",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
+}
+
+print_add_url_err :: proc() {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		"Incorrect package URL",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Usage: ",
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		"add ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"<package-url> ",
+		color_ansi(an.FG_BLUE),
+		"[OPTIONS]",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"Expected format: ",
+		color_ansi(an.RESET),
+		"example.com/owner/repo\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
+}
+
+print_add_name_err :: proc() {
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		"Expected package name",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Usage: ",
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		"add ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"<package-url> ",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		color_ansi(an.FAINT),
+		"--name ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		"<package-name>",
+		color_ansi(an.RESET),
+		"\n",
+		sep = "",
+	)
+	fmt.eprintln(
+		"For more information, try '",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"--help",
+		color_ansi(an.RESET),
+		"'.",
+		sep = "",
+	)
+}
+
+print_add_usage :: proc(output := os.stdout) {
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"mimir ",
+		color_ansi(an.FG_BRIGHT_BLUE),
+		"add ",
+		color_ansi(an.RESET),
+		color_ansi(an.FG_BLUE),
+		"<package-url> ",
+		color_ansi(an.FG_BLUE),
+		"[OPTIONS]",
+		color_ansi(an.RESET),
+		sep = "",
+	)
+	fmt.fprintln(output, "Add a package to your project from URL\n")
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		"Expected URL format: ",
+		color_ansi(an.RESET),
+		"example.com/owner/repo\n",
+		sep = "",
+	)
+	fmt.fprintln(
+		output,
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		"Options:",
+		sep = "",
+	)
+	// First pass: find the widest command name (including the short
+	// flag suffix) so the descriptions all line up in the output.
+	max_width := 0
+	for flag in Add_Options {
+		width := len(flag.name)
+		if flag.short != "" {
+			width += len(flag.short) + 2 // ", " + short
+		}
+		if width > max_width {
+			max_width = width
+		}
+	}
+
+	// Second pass: print each command, padded to max_width plus a
+	// small gap before the description.
+	for flag in Add_Options {
 		name := flag.name
 		if flag.short != "" {
 			name = fmt.tprintf("%s, %s", flag.name, flag.short)

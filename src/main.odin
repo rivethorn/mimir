@@ -6,6 +6,7 @@ package main
 
 import "core:fmt"
 import "core:os"
+import "pkgs:add"
 import "pkgs:build"
 import "pkgs:clean"
 import "pkgs:cli"
@@ -32,6 +33,8 @@ main :: proc() {
 		run.handle_run(&state)
 	case .New:
 		new.create()
+	case .Add:
+		add.handle_add(&state)
 	case .Clean:
 		clean.handle_clean()
 	case .Version:

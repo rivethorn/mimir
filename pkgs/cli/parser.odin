@@ -69,11 +69,6 @@ set_config :: proc(app_state: ^state.State) {
 			os.exit(1)
 		}
 
-		if len(os.args) > 3 {
-			print_new_name_help()
-			os.exit(1)
-		}
-
 		for i := 2; i < len(os.args); i += 1 {
 			switch os.args[i] {
 			case "--help", "-h":
@@ -82,5 +77,46 @@ set_config :: proc(app_state: ^state.State) {
 			}
 		}
 
+		if len(os.args) > 3 {
+			print_new_name_help()
+			os.exit(1)
+		}
+	case .Add:
+		if len(os.args) < 3 {
+			print_add_arg_err()
+			os.exit(1)
+		}
+
+		for i := 2; i < len(os.args); i += 1 {
+			switch os.args[i] {
+			case "--help", "-h":
+				print_add_usage()
+				os.exit(0)
+			case "--name":
+				if len(os.args) == i + 2 {
+					app_state.config.pkg_name = os.args[i + 1]
+				} else {
+					print_add_name_err()
+					os.exit(1)
+				}
+			case:
+				if os.args[i - 1] == "--name" {
+					return
+				}
+				arr, _ := strings.split(
+					os.args[i],
+					"/",
+					context.temp_allocator,
+				)
+				if !strings.contains_rune(os.args[i], '/') ||
+				   arr[len(arr) - 1] == ".git" ||
+				   strings.contains_rune(os.args[i], '@') {
+					print_add_url_err()
+					os.exit(1)
+				}
+				app_state.config.pkg_name = arr[len(arr) - 1]
+				app_state.config.pkg_url = os.args[i]
+			}
+		}
 	}
 }

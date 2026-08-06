@@ -6,7 +6,7 @@ Command :: enum {
 	Run,
 	New,
 	Clean,
-	// Add,
+	Add,
 	// Remove,
 	// Install,
 	// Uninstall,
@@ -16,9 +16,9 @@ Command :: enum {
 }
 
 Command_Config :: struct {
-	name, src_path, output: string,
-	run_args:               []string,
-	release, silent:        bool,
+	name, src_path, output, pkg_name, pkg_url: string,
+	run_args:                                  []string,
+	release, silent:                           bool,
 }
 
 State :: struct {

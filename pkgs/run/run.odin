@@ -3,7 +3,6 @@ package run
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
-import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:build"
 import "pkgs:cli"
@@ -29,11 +28,7 @@ handle_run :: proc(app_state: ^state.State) {
 		exe_extension = ".exe"
 	}
 
-	tmp := strings.split(project_dir, "/")
-	when ODIN_OS == .Windows {
-		tmp = strings.split(project_dir, "\\")
-	}
-	project_name := tmp[len(tmp) - 1]
+	project_name := filepath.base(project_dir)
 	bin_path, _ := filepath.join(
 		{
 			project_dir,
@@ -54,6 +49,7 @@ handle_run :: proc(app_state: ^state.State) {
 		working_dir = project_dir,
 		stdout      = os.stdout,
 		stderr      = os.stderr,
+		stdin       = os.stdin,
 	}
 
 	if !app_state.config.silent {
@@ -100,11 +96,10 @@ handle_run :: proc(app_state: ^state.State) {
 			exec_err,
 			sep = "",
 		)
-		delete(command)
 		os.exit(1)
 	}
 
 	state, _ := os.process_wait(run_process)
-	delete(command)
+
 	os.exit(state.exit_code)
 }

@@ -4,7 +4,9 @@
 
 package main
 
+import "base:runtime"
 import "core:fmt"
+import "core:mem"
 import "core:os"
 import "pkgs:add"
 import "pkgs:build"
@@ -18,9 +20,16 @@ import "pkgs:state"
 import "pkgs:update"
 import "pkgs:util"
 
-VERSION := #config(VERSION, "0.10.0")
+VERSION := #config(VERSION, "0.10.1")
 
 main :: proc() {
+	arena: mem.Dynamic_Arena
+	mem.dynamic_arena_init(&arena)
+	context.allocator = mem.dynamic_arena_allocator(&arena)
+	defer mem.dynamic_arena_destroy(&arena)
+
+	runtime.DEFAULT_TEMP_ALLOCATOR_TEMP_GUARD()
+
 	if len(os.args) < 2 {
 		cli.print_general_usage(os.stderr)
 		os.exit(1)

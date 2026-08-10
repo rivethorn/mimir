@@ -7,6 +7,17 @@ import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
 
+delete_strings :: proc(ss: []string) {
+	for s in ss {
+		delete(s)
+	}
+}
+
+delete_dynamic_strings :: proc(ss: [dynamic]string) {
+	delete_strings(ss[:])
+	delete(ss)
+}
+
 command_exists :: proc(command_name: string) -> bool {
 	path_env, found := os.lookup_env("PATH", context.temp_allocator)
 	if !found {return false}

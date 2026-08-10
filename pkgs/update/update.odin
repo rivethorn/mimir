@@ -3,6 +3,7 @@ package update
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
+import "core:sync"
 import "core:terminal/ansi"
 import "core:thread"
 import "pkgs:cli"
@@ -55,7 +56,9 @@ update_repo :: proc(pkg_name, pkg_dir: string) {
 
 	state, _ := os.process_wait(update_process)
 
+	sync.mutex_lock(&spin_state.mtx)
 	spin_state.is_running = false
+	sync.mutex_unlock(&spin_state.mtx)
 	thread.join(spinner_thread)
 	thread.destroy(spinner_thread)
 

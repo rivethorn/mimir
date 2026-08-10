@@ -5,7 +5,6 @@ import "core:encoding/json"
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
-import "core:strings"
 import "core:terminal/ansi"
 import "core:time"
 import "pkgs:cli"
@@ -93,11 +92,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 		exe_extension = ".exe"
 	}
 
-	tmp := strings.split(working_dir, "/")
-	when ODIN_OS == .Windows {
-		tmp = strings.split(working_dir, "\\")
-	}
-	project_name := tmp[len(tmp) - 1]
+	project_name := filepath.base(working_dir)
 	bin_path, _ := filepath.join(
 		{
 			working_dir,
@@ -110,7 +105,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	)
 
 	collections := get_collections(working_dir)
-	defer delete(collections)
+	defer util.delete_dynamic_strings(collections)
 
 	first_time := !os.exists(bin_path)
 
@@ -279,7 +274,7 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 }
 
 handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
-	project_dir, err := os.get_working_directory(context.temp_allocator)
+	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
 		fmt.eprintln(
 			cli.color_ansi(ansi.FG_RED),
@@ -295,12 +290,7 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 		context.temp_allocator,
 	)
 
-	tmp := strings.split(project_dir, "/")
-	when ODIN_OS == .Windows {
-		tmp = strings.split(project_dir, "\\")
-	}
-	project_name := tmp[len(tmp) - 1]
-	delete(tmp)
+	project_name := filepath.base(project_dir)
 
 	exe_extension := ""
 	when ODIN_OS == .Windows {
@@ -311,12 +301,12 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 	if app_state.config.release {
 		output, _ = filepath.join(
 			{"bin", "release", project_name, exe_extension},
-			context.temp_allocator,
+			context.allocator,
 		)
 	} else {
 		output, _ = filepath.join(
 			{"bin", "debug", project_name, exe_extension},
-			context.temp_allocator,
+			context.allocator,
 		)
 	}
 

@@ -6,6 +6,7 @@ import "core:path/filepath"
 import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
+import "pkgs:util"
 
 @(private)
 get_directory_names :: proc(dir_path: string) -> ([dynamic]string, os.Error) {
@@ -48,7 +49,7 @@ handle_list :: proc() {
 	pkg_path, _ := filepath.join({cwd, "pkgs"}, context.temp_allocator)
 
 	dirs, d_err := get_directory_names(pkg_path)
-	defer delete(dirs)
+	defer util.delete_dynamic_strings(dirs)
 	if d_err != nil {
 		fmt.eprintln(
 			cli.color_ansi(ansi.FG_RED),

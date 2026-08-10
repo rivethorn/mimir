@@ -3,6 +3,7 @@ package add
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
+import "core:sync"
 import "core:terminal/ansi"
 import "core:thread"
 import "pkgs:cli"
@@ -10,13 +11,10 @@ import "pkgs:state"
 
 @(private)
 get_tmp_dir :: #force_inline proc() -> string {
-	tmp, tmp_err := os.temp_dir(context.temp_allocator)
+	tmp, tmp_err := os.temp_dir(context.allocator)
 	if tmp_err != nil {
-		cwd, _ := os.get_working_directory(context.temp_allocator)
-		tmp_path, _ := filepath.join(
-			{cwd, "pkgs", "tmp"},
-			context.temp_allocator,
-		)
+		cwd, _ := os.get_working_directory(context.allocator)
+		tmp_path, _ := filepath.join({cwd, "pkgs", "tmp"}, context.allocator)
 		if err := os.make_directory_all(tmp_path); err == nil {
 			tmp = tmp_path
 		}
@@ -75,7 +73,9 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 
 	state, _ := os.process_wait(clone_process)
 
+	sync.mutex_lock(&spin_state.mtx)
 	spin_state.is_running = false
+	sync.mutex_unlock(&spin_state.mtx)
 	thread.join(spinner_thread)
 	thread.destroy(spinner_thread)
 

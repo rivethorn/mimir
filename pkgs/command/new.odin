@@ -1,4 +1,4 @@
-package new
+package command
 
 import "core:fmt"
 import "core:os"
@@ -6,7 +6,7 @@ import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
 
-create :: proc() {
+handle_new :: proc() {
 	project_name := os.args[2]
 
 	if strings.contains_any(project_name, `\/:*?"<>|`) ||

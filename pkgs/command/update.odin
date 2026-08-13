@@ -1,4 +1,4 @@
-package add
+package command
 
 import "core:fmt"
 import "core:os"
@@ -9,26 +9,9 @@ import "core:thread"
 import "pkgs:cli"
 import "pkgs:state"
 
-@(private)
-get_tmp_dir :: #force_inline proc() -> string {
-	tmp, tmp_err := os.temp_dir(context.allocator)
-	if tmp_err != nil {
-		cwd, _ := os.get_working_directory(context.allocator)
-		tmp_path, _ := filepath.join({cwd, "pkgs", "tmp"}, context.allocator)
-		if err := os.make_directory_all(tmp_path); err == nil {
-			tmp = tmp_path
-		}
-	} else {
-		tmp = fmt.tprintf("%s%s", tmp, "mimir")
-	}
-
-	return tmp
-}
-
-@(private)
-clone_repo :: proc(url, pkg_name, tmp_dir: string) {
-	full_url := fmt.tprintf("https://%s.git", url)
-	command := []string{"git", "clone", full_url, pkg_name}
+@(private = "file")
+update_repo :: proc(pkg_name, pkg_dir: string) {
+	command := []string{"git", "pull"}
 
 	null_path := "NUL" when ODIN_OS == .Windows else "/dev/null"
 
@@ -41,7 +24,7 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 
 	spin_state := cli.Spinner_State {
 		message    = fmt.tprintf(
-			"%sCloning the package...%s",
+			"%sUpdating the package...%s",
 			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 			cli.color_ansi(ansi.RESET),
 		),
@@ -50,7 +33,7 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 
 	clone_command := os.Process_Desc {
 		command     = command,
-		working_dir = tmp_dir,
+		working_dir = pkg_dir,
 		stderr      = null_fd,
 		stdout      = null_fd,
 	}
@@ -59,19 +42,19 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 	spinner_thread.data = &spin_state
 	thread.start(spinner_thread)
 
-	clone_process, exec_err := os.process_start(clone_command)
+	update_process, exec_err := os.process_start(clone_command)
 	if exec_err != nil {
 		fmt.eprintln(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"Clone Failed\n",
+			"Update Failed\n",
 			cli.color_ansi(ansi.RESET),
 			sep = "",
 		)
 		os.exit(1)
 	}
 
-	state, _ := os.process_wait(clone_process)
+	state, _ := os.process_wait(update_process)
 
 	sync.mutex_lock(&spin_state.mtx)
 	spin_state.is_running = false
@@ -81,7 +64,7 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 
 	if state.exit_code != 0 {
 		fmt.printfln(
-			"\r%s%sFailed to clone the package%s",
+			"\r%s%sFailed to update the package%s",
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_RED),
 			cli.color_ansi(ansi.RESET),
@@ -90,7 +73,7 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 	}
 
 	fmt.printf(
-		"\r%sCloning the package... %s%sDone!%s",
+		"\r%sUpdating the package... %s%sDone!%s",
 		cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 		cli.color_ansi(ansi.BOLD),
 		cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -98,51 +81,66 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 	)
 }
 
-handle_add :: proc(app_state: ^state.State) {
-	tmp := get_tmp_dir()
-	os.remove_all(tmp)
-	defer os.remove_all(tmp)
-
-	os.make_directory(tmp)
-
+handle_update :: proc(app_state: ^state.State) {
 	pkg_name := app_state.config.name
+	cwd, _ := os.get_working_directory(context.temp_allocator)
+	pkg_path, _ := filepath.join(
+		{cwd, "pkgs", pkg_name},
+		context.temp_allocator,
+	)
 
-	clone_repo(app_state.config.url, pkg_name, tmp)
-
-	tmp_path, _ := filepath.join({tmp, pkg_name}, context.temp_allocator)
-	cwd, err := os.get_working_directory(context.temp_allocator)
-	if err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_RED),
-			"\nFailed to determine project path",
+	if !os.exists(pkg_path) {
+		fmt.eprintfln(
+			"%s%sError:%s Package '%s%s%s' does not exist in this project",
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_RED),
 			cli.color_ansi(ansi.RESET),
-			sep = "",
+			cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
+			pkg_name,
+			cli.color_ansi(ansi.RESET),
 		)
 		os.exit(1)
 	}
-	pkg_path, _ := filepath.join({cwd, "pkgs"}, context.temp_allocator)
 
-	cpy_err := os.copy_directory_all(pkg_path, tmp_path)
-	if cpy_err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_RED),
-			"\nFailed to move package ",
+	if app_state.config.dry_run {
+		if pkg_name == "" {
+			fmt.printfln(
+				"%s%sNothing to do!%s",
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_CYAN),
+				cli.color_ansi(ansi.RESET),
+			)
+
+			os.exit(0)
+		}
+
+		fmt.printfln(
+			"%s%sWould%s run `%sgit pull%s` in '%s%s%s' directory",
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 			cli.color_ansi(ansi.RESET),
-			sep = "",
+			cli.color_ansi(ansi.FG_BRIGHT_BLUE),
+			cli.color_ansi(ansi.RESET),
+			cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
+			pkg_path,
+			cli.color_ansi(ansi.RESET),
 		)
-		os.exit(1)
+
+		os.exit(0)
 	}
+
+	update_repo(pkg_name, pkg_path)
 
 	fmt.println(
 		cli.color_ansi(ansi.BOLD),
 		cli.color_ansi(ansi.FG_BRIGHT_GREEN),
 		"\nSuccessfully ",
 		cli.color_ansi(ansi.RESET),
-		"added '",
+		"updated '",
 		cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 		pkg_name,
 		cli.color_ansi(ansi.RESET),
-		"' to the project",
+		"'",
 		sep = "",
 	)
 }

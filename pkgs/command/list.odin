@@ -1,4 +1,4 @@
-package list
+package command
 
 import "core:fmt"
 import "core:os"
@@ -8,7 +8,7 @@ import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:util"
 
-@(private)
+@(private = "file")
 get_directory_names :: proc(dir_path: string) -> ([dynamic]string, os.Error) {
 	f, err := os.open(dir_path)
 	if err != nil {

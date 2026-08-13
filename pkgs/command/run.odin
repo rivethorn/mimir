@@ -1,15 +1,14 @@
-package run
+package command
 
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
 import "core:terminal/ansi"
-import "pkgs:build"
 import "pkgs:cli"
 import "pkgs:state"
 
 handle_run :: proc(app_state: ^state.State) {
-	rebuild := build.handle_build(app_state)
+	rebuild := handle_build(app_state)
 
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {

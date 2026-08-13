@@ -1,5 +1,5 @@
 #+feature dynamic-literals
-package build
+package command
 
 import "core:encoding/json"
 import "core:fmt"
@@ -11,7 +11,7 @@ import "pkgs:cli"
 import "pkgs:state"
 import "pkgs:util"
 
-@(private)
+@(private = "file")
 Build_Error :: enum {
 	None,
 	Command_Not_Found,
@@ -20,7 +20,7 @@ Build_Error :: enum {
 	Spawn_Failure,
 }
 
-@(private)
+@(private = "file")
 get_collections :: proc(cwd: string) -> [dynamic]string {
 	config: Ols
 
@@ -56,7 +56,7 @@ get_collections :: proc(cwd: string) -> [dynamic]string {
 	return collections
 }
 
-@(private)
+@(private = "file")
 start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	if !util.command_exists("odin") {
 		return .Command_Not_Found
@@ -229,7 +229,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	return .None
 }
 
-@(private)
+@(private = "file")
 needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 	bin_info, bin_err := os.stat(binary_path, context.temp_allocator)
 	if bin_err != nil {

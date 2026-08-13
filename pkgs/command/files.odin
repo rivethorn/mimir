@@ -1,6 +1,5 @@
 #+private
-
-package new
+package command
 
 MAIN_FILE_CONTENT: string : `package main
 
@@ -33,4 +32,3 @@ OLS_FILE_CONTENT: string : `{
 GITIG_FILE_CONTENT: string : `bin/
 *.bin
 .DS_Store`
-

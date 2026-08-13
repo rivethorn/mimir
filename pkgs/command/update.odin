@@ -1,4 +1,4 @@
-package update
+package command
 
 import "core:fmt"
 import "core:os"
@@ -9,7 +9,7 @@ import "core:thread"
 import "pkgs:cli"
 import "pkgs:state"
 
-@(private)
+@(private = "file")
 update_repo :: proc(pkg_name, pkg_dir: string) {
 	command := []string{"git", "pull"}
 

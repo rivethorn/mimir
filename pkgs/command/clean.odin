@@ -1,4 +1,4 @@
-package clean
+package command
 
 import "core:fmt"
 import "core:os"

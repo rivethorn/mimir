@@ -1,4 +1,4 @@
-package remove
+package command
 
 import "core:fmt"
 import "core:os"

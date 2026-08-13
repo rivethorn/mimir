@@ -8,16 +8,9 @@ import "base:runtime"
 import "core:fmt"
 import "core:mem"
 import "core:os"
-import "pkgs:add"
-import "pkgs:build"
-import "pkgs:clean"
 import "pkgs:cli"
-import "pkgs:list"
-import "pkgs:new"
-import "pkgs:remove"
-import "pkgs:run"
+import "pkgs:command"
 import "pkgs:state"
-import "pkgs:update"
 import "pkgs:util"
 
 VERSION := #config(VERSION, "0.10.1")
@@ -49,21 +42,21 @@ main :: proc() {
 
 	switch state.command {
 	case .Build:
-		build.handle_build(&state)
+		command.handle_build(&state)
 	case .Run:
-		run.handle_run(&state)
+		command.handle_run(&state)
 	case .New:
-		new.create()
+		command.handle_new()
 	case .Add:
-		add.handle_add(&state)
+		command.handle_add(&state)
 	case .Remove:
-		remove.handle_remove(&state)
+		command.handle_remove(&state)
 	case .Update:
-		update.handle_update(&state)
+		command.handle_update(&state)
 	case .List:
-		list.handle_list()
+		command.handle_list()
 	case .Clean:
-		clean.handle_clean(&state)
+		command.handle_clean(&state)
 	case .Version:
 		fmt.println("Mimir version", VERSION)
 	case .Help:

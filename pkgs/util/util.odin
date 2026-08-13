@@ -4,7 +4,9 @@ import "core:fmt"
 import "core:os"
 import "core:path/filepath"
 import "core:strings"
+import "core:sync"
 import "core:terminal/ansi"
+import "core:thread"
 import "pkgs:cli"
 
 delete_strings :: proc(ss: []string) {
@@ -102,4 +104,79 @@ is_odin_project :: proc() -> bool {
 	}
 
 	return true
+}
+
+clone_repo :: proc(url, pkg_name, tmp_dir: string) {
+	full_url := fmt.tprintf("https://%s.git", url)
+	command := []string{"git", "clone", full_url, pkg_name}
+
+	null_path := "NUL" when ODIN_OS == .Windows else "/dev/null"
+
+	null_fd, err := os.open(null_path, os.O_WRONLY)
+	if err != nil {
+		fmt.printfln("Failed to open null device: %v", err)
+		return
+	}
+	defer os.close(null_fd)
+
+	spin_state := cli.Spinner_State {
+		message    = fmt.tprintf(
+			"%sCloning %s...%s",
+			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
+			pkg_name,
+			cli.color_ansi(ansi.RESET),
+		),
+		is_running = true,
+	}
+
+	clone_command := os.Process_Desc {
+		command     = command,
+		working_dir = tmp_dir,
+		stderr      = null_fd,
+		stdout      = null_fd,
+	}
+
+	spinner_thread := thread.create(cli.spinner_proc)
+	spinner_thread.data = &spin_state
+	thread.start(spinner_thread)
+
+	clone_process, exec_err := os.process_start(clone_command)
+	if exec_err != nil {
+		fmt.eprintln(
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_RED),
+			"Clone Failed\n",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		os.exit(1)
+	}
+
+	state, _ := os.process_wait(clone_process)
+
+	sync.mutex_lock(&spin_state.mtx)
+	spin_state.is_running = false
+	sync.mutex_unlock(&spin_state.mtx)
+	thread.join(spinner_thread)
+	thread.destroy(spinner_thread)
+
+	if state.exit_code != 0 {
+		fmt.printfln(
+			"\r%s%sFailed to clone %s%s",
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_RED),
+			pkg_name,
+			cli.color_ansi(ansi.RESET),
+		)
+		os.exit(state.exit_code)
+	}
+
+	fmt.printf(
+		"\r%sCloning %s... %s%sDone!%s",
+		cli.color_ansi(ansi.FG_BRIGHT_CYAN),
+		pkg_name,
+		cli.color_ansi(ansi.BOLD),
+		cli.color_ansi(ansi.FG_BRIGHT_GREEN),
+		cli.color_ansi(ansi.RESET),
+	)
 }

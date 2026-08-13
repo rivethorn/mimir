@@ -1,5 +1,5 @@
 #+private
-package build
+package command
 
 Collection :: struct {
 	name: string,

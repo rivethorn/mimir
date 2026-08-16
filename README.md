@@ -38,7 +38,7 @@ release pipeline to speak of — you build from source:
 
 ```bash
 cd mimir
-odin build src -collection:pkgs=pkgs
+odin build src -collection:pkgs=pkgs -o:speed
 ```
 
 Then put the `mimir` binary somewhere on your `PATH`. That's it.

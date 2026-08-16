@@ -3,6 +3,8 @@ package command
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
+import "core:sys/posix"
+import "core:sys/windows"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:state"
@@ -85,6 +87,12 @@ handle_run :: proc(app_state: ^state.State) {
 		}
 	}
 
+	when ODIN_OS == .Windows {
+		windows.SetConsoleCtrlHandler(nil, true)
+	} else {
+		posix.signal(.SIGINT, nil)
+	}
+
 	run_process, exec_err := os.process_start(run_command)
 	if exec_err != nil {
 		fmt.eprintln(
@@ -97,6 +105,8 @@ handle_run :: proc(app_state: ^state.State) {
 		)
 		os.exit(1)
 	}
+
+	free_all(context.temp_allocator)
 
 	state, _ := os.process_wait(run_process)
 

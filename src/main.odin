@@ -13,7 +13,7 @@ import "pkgs:command"
 import "pkgs:state"
 import "pkgs:util"
 
-VERSION := #config(VERSION, "0.10.2")
+VERSION :: "0.10.3"
 
 main :: proc() {
 	arena: mem.Dynamic_Arena
@@ -28,16 +28,16 @@ main :: proc() {
 		os.exit(1)
 	}
 
-	if !util.is_odin_project() {
-		fmt.eprintln(
-			"Current directory does not contain a valid Odin project for Mimir to work with.",
-		)
+	state: state.State
+
+	cli.set_main_command(&state)
+
+	if !util.is_general_command(state.command) && !util.is_odin_project() {
+		cli.print_no_proj()
 		os.exit(1)
 	}
 
-	state: state.State
-
-	cli.state_init(&state)
+	cli.set_config(&state)
 
 	switch state.command {
 	case .Build:

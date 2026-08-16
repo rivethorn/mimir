@@ -8,6 +8,7 @@ import "core:sync"
 import "core:terminal/ansi"
 import "core:thread"
 import "pkgs:cli"
+import "pkgs:state"
 
 delete_strings :: proc(ss: []string) {
 	for s in ss {
@@ -57,6 +58,7 @@ command_exists :: proc(command_name: string) -> bool {
 }
 
 is_odin_project :: proc() -> bool {
+	defer free_all(context.temp_allocator)
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
 		fmt.eprintln(
@@ -78,21 +80,13 @@ is_odin_project :: proc() -> bool {
 	}
 
 	walker := os.walker_create(source_dir)
-	files: [dynamic]string
-	defer delete(files)
-
 	for info in os.walker_walk(&walker) {
 		if strings.has_suffix(info.fullpath, ".odin") {
-			append(&files, info.name)
-			continue
+			return true
 		}
 	}
 
 	os.walker_destroy(&walker)
-
-	if len(files) == 0 {
-		return false
-	}
 
 	ols_path, _ := filepath.join(
 		{project_dir, "ols.json"},
@@ -104,6 +98,17 @@ is_odin_project :: proc() -> bool {
 	}
 
 	return true
+}
+
+is_general_command :: proc(command: state.Command) -> bool {
+	switch command {
+	case .New, .Version, .Help, .Error:
+		return true
+	case .Build, .Run, .Clean, .Add, .Remove, .Update, .List:
+		return false
+	case:
+		return false
+	}
 }
 
 clone_repo :: proc(url, pkg_name, tmp_dir: string) {

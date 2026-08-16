@@ -4,12 +4,6 @@ import "core:os"
 import "core:strings"
 import "pkgs:state"
 
-state_init :: proc(app_state: ^state.State) {
-	set_main_command(app_state)
-	set_config(app_state)
-}
-
-@(private = "file")
 set_main_command :: proc(app_state: ^state.State) {
 	for opt in Main_Commands {
 		if os.args[1] == opt.name || os.args[1] == opt.short {
@@ -18,7 +12,6 @@ set_main_command :: proc(app_state: ^state.State) {
 	}
 }
 
-@(private = "file")
 set_config :: proc(app_state: ^state.State) {
 	#partial switch app_state.command {
 	case .Build:

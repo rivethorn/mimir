@@ -952,3 +952,13 @@ unknown_command :: proc() {
 		os.args[1],
 	)
 }
+
+print_no_proj :: proc() {
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sError%s: Current directory does not contain a valid Odin project for Mimir to work with.",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_RED),
+		color_ansi(an.RESET),
+	)
+}

@@ -128,6 +128,11 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.name = os.args[i]
 			}
 		}
+
+		if app_state.config.name == "" {
+			print_remove_arg_err()
+			os.exit(1)
+		}
 	case .Update:
 		if len(os.args) < 3 {
 			print_update_arg_err()

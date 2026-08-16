@@ -45,12 +45,12 @@ set_config :: proc(app_state: ^state.State) {
 				}
 				break outer_for
 			case:
-				if strings.starts_with(os.args[i], "-") {
-					print_run_unexpected_arg(os.args[i], false)
-					os.exit(1)
-				}
 				if strings.starts_with(os.args[i], "--") {
 					print_run_unexpected_arg(os.args[i], true)
+					os.exit(1)
+				}
+				if strings.starts_with(os.args[i], "-") {
+					print_run_unexpected_arg(os.args[i], false)
 					os.exit(1)
 				}
 				app_state.config.run_args = os.args[i:len(os.args)]

@@ -27,11 +27,7 @@ handle_new :: proc() {
 	}
 
 	if strings.contains(project_name, " ") {
-		name_arr, err := strings.split(
-			project_name,
-			" ",
-			context.temp_allocator,
-		)
+		name_arr, err := strings.split(project_name, " ", context.allocator)
 		if err != nil {
 			fmt.eprintf(
 				"%s%sERROR%s: failed to parse project name\n",
@@ -42,11 +38,7 @@ handle_new :: proc() {
 			os.exit(1)
 		}
 
-		clean_name, cn_err := strings.join(
-			name_arr,
-			"-",
-			context.temp_allocator,
-		)
+		clean_name, cn_err := strings.join(name_arr, "-", context.allocator)
 		if cn_err != nil {
 			fmt.eprintf(
 				"%s%sERROR%s: failed to parse project name\n",
@@ -86,7 +78,7 @@ handle_new :: proc() {
 		}
 	}
 
-	pkgs_dir := fmt.tprintf("%s/pkgs", project_dir)
+	pkgs_dir := fmt.aprintf("%s/pkgs", project_dir)
 	if err := os.make_directory(pkgs_dir); err != nil {
 		if !os.exists(pkgs_dir) {
 			fmt.eprintf(
@@ -100,7 +92,7 @@ handle_new :: proc() {
 		}
 	}
 
-	src_dir := fmt.tprintf("%s/src", project_dir)
+	src_dir := fmt.aprintf("%s/src", project_dir)
 	if err := os.make_directory(src_dir); err != nil {
 		if !os.exists(src_dir) {
 			fmt.eprintf(
@@ -113,7 +105,7 @@ handle_new :: proc() {
 			os.exit(1)
 		}
 	}
-	main_path := fmt.tprintf("%s/src/main.odin", project_dir)
+	main_path := fmt.aprintf("%s/src/main.odin", project_dir)
 	if err := os.write_entire_file(
 		main_path,
 		transmute([]byte)(MAIN_FILE_CONTENT),
@@ -127,10 +119,9 @@ handle_new :: proc() {
 		os.exit(1)
 	}
 
-	readme_path := fmt.tprintf("%s/README.md", project_dir)
-	readme_content := fmt.tprintf(
-		"# %s\n\nA new Odin project.\n\n## Build\n\n`odin build .`\nThen\n`./%s`\n\n## Run\n\n`odin run .`",
-		project_name,
+	readme_path := fmt.aprintf("%s/README.md", project_dir)
+	readme_content := fmt.aprintf(
+		"# %s\n\nAn [Odin](https://odin-lang.org) project managed via **Mimir**.\n\n## Quick Start\n\n```bash\nmimir run    # Build and run\nmimir build  # Compile to binary\nmimir clean  # Clear build files and artifacts\n```",
 		project_name,
 	)
 	if err := os.write_entire_file(readme_path, transmute([]u8)readme_content);
@@ -144,7 +135,7 @@ handle_new :: proc() {
 		os.exit(1)
 	}
 
-	ols_path := fmt.tprintf("%s/ols.json", project_dir)
+	ols_path := fmt.aprintf("%s/ols.json", project_dir)
 	if err := os.write_entire_file(ols_path, transmute([]u8)OLS_FILE_CONTENT);
 	   err != nil {
 		fmt.eprintf(
@@ -156,7 +147,7 @@ handle_new :: proc() {
 		os.exit(1)
 	}
 
-	odinfmt_path := fmt.tprintf("%s/odinfmt.json", project_dir)
+	odinfmt_path := fmt.aprintf("%s/odinfmt.json", project_dir)
 	if err := os.write_entire_file(
 		odinfmt_path,
 		transmute([]u8)FMT_FILE_CONTENT,
@@ -170,8 +161,8 @@ handle_new :: proc() {
 		os.exit(1)
 	}
 
-	gitignore_path := fmt.tprintf("%s/.gitignore", project_dir)
-	gitignore_content := fmt.tprintf("%s\n", GITIG_FILE_CONTENT, project_name)
+	gitignore_path := fmt.aprintf("%s/.gitignore", project_dir)
+	gitignore_content := fmt.aprintf("%s\n", GITIG_FILE_CONTENT, project_name)
 	if err := os.write_entire_file(
 		gitignore_path,
 		transmute([]u8)gitignore_content,

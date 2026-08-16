@@ -14,8 +14,8 @@ handle_new :: proc() {
 	   strings.starts_with(project_name, "--") ||
 	   project_name == "." ||
 	   project_name == ".." {
-		fmt.eprintf(
-			"%s%sERROR%s: Invalid project name '%s%s%s'\n",
+		fmt.eprintfln(
+			"%s%sERROR%s: Invalid project name '%s%s%s'",
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_RED),
 			cli.color_ansi(ansi.RESET),
@@ -29,8 +29,8 @@ handle_new :: proc() {
 	if strings.contains(project_name, " ") {
 		name_arr, err := strings.split(project_name, " ", context.allocator)
 		if err != nil {
-			fmt.eprintf(
-				"%s%sERROR%s: failed to parse project name\n",
+			fmt.eprintfln(
+				"%s%sERROR%s: failed to parse project name",
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_RED),
 				cli.color_ansi(ansi.RESET),
@@ -40,8 +40,8 @@ handle_new :: proc() {
 
 		clean_name, cn_err := strings.join(name_arr, "-", context.allocator)
 		if cn_err != nil {
-			fmt.eprintf(
-				"%s%sERROR%s: failed to parse project name\n",
+			fmt.eprintfln(
+				"%s%sERROR%s: failed to parse project name",
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_RED),
 				cli.color_ansi(ansi.RESET),
@@ -55,8 +55,8 @@ handle_new :: proc() {
 	project_dir := project_name
 
 	if os.exists(project_dir) {
-		fmt.eprintf(
-			"%s%sWARNING%s: A project named %q aleadey exists in the current directory\n",
+		fmt.eprintfln(
+			"%s%sWARNING%s: A project named %q aleadey exists in the current directory",
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
 			cli.color_ansi(ansi.RESET),
@@ -67,8 +67,8 @@ handle_new :: proc() {
 
 	if err := os.make_directory(project_dir); err != nil {
 		if !os.exists(project_dir) {
-			fmt.eprintf(
-				"%sFailed%s to create directory %q: %v\n",
+			fmt.eprintfln(
+				"%sFailed%s to create directory %q: %v",
 				cli.color_ansi(ansi.FG_RED),
 				cli.color_ansi(ansi.RESET),
 				project_dir,
@@ -81,8 +81,8 @@ handle_new :: proc() {
 	pkgs_dir := fmt.aprintf("%s/pkgs", project_dir)
 	if err := os.make_directory(pkgs_dir); err != nil {
 		if !os.exists(pkgs_dir) {
-			fmt.eprintf(
-				"%sFailed%s to create directory %q: %v\n",
+			fmt.eprintfln(
+				"%sFailed%s to create directory %q: %v",
 				cli.color_ansi(ansi.FG_RED),
 				cli.color_ansi(ansi.RESET),
 				pkgs_dir,
@@ -95,8 +95,8 @@ handle_new :: proc() {
 	src_dir := fmt.aprintf("%s/src", project_dir)
 	if err := os.make_directory(src_dir); err != nil {
 		if !os.exists(src_dir) {
-			fmt.eprintf(
-				"%sFailed%s to create directory %q: %v\n",
+			fmt.eprintfln(
+				"%sFailed%s to create directory %q: %v",
 				cli.color_ansi(ansi.FG_RED),
 				cli.color_ansi(ansi.RESET),
 				src_dir,
@@ -110,8 +110,8 @@ handle_new :: proc() {
 		main_path,
 		transmute([]byte)(MAIN_FILE_CONTENT),
 	); err != nil {
-		fmt.eprintf(
-			"%sFailed%s to write main.odin: %v\n",
+		fmt.eprintfln(
+			"%sFailed%s to write main.odin: %v",
 			cli.color_ansi(ansi.FG_RED),
 			cli.color_ansi(ansi.RESET),
 			err,
@@ -126,8 +126,8 @@ handle_new :: proc() {
 	)
 	if err := os.write_entire_file(readme_path, transmute([]u8)readme_content);
 	   err != nil {
-		fmt.eprintf(
-			"%sFailed%s to write README.md: %v\n",
+		fmt.eprintfln(
+			"%sFailed%s to write README.md: %v",
 			cli.color_ansi(ansi.FG_RED),
 			cli.color_ansi(ansi.RESET),
 			err,
@@ -138,8 +138,8 @@ handle_new :: proc() {
 	ols_path := fmt.aprintf("%s/ols.json", project_dir)
 	if err := os.write_entire_file(ols_path, transmute([]u8)OLS_FILE_CONTENT);
 	   err != nil {
-		fmt.eprintf(
-			"%sFailed%s to write ols.json: %v\n",
+		fmt.eprintfln(
+			"%sFailed%s to write ols.json: %v",
 			cli.color_ansi(ansi.FG_RED),
 			cli.color_ansi(ansi.RESET),
 			err,
@@ -152,8 +152,8 @@ handle_new :: proc() {
 		odinfmt_path,
 		transmute([]u8)FMT_FILE_CONTENT,
 	); err != nil {
-		fmt.eprintf(
-			"%sFailed%s to write odinfmt.json: %v\n",
+		fmt.eprintfln(
+			"%sFailed%s to write odinfmt.json: %v",
 			cli.color_ansi(ansi.FG_RED),
 			cli.color_ansi(ansi.RESET),
 			err,
@@ -162,13 +162,17 @@ handle_new :: proc() {
 	}
 
 	gitignore_path := fmt.aprintf("%s/.gitignore", project_dir)
-	gitignore_content := fmt.aprintf("%s\n", GITIG_FILE_CONTENT, project_name)
+	gitignore_content := fmt.aprintf(
+		"%s\n%s",
+		GITIG_FILE_CONTENT,
+		project_name,
+	)
 	if err := os.write_entire_file(
 		gitignore_path,
 		transmute([]u8)gitignore_content,
 	); err != nil {
-		fmt.eprintf(
-			"%sFailed%s to write .gitignore: %v\n",
+		fmt.eprintfln(
+			"%sFailed%s to write .gitignore: %v",
 			cli.color_ansi(ansi.FG_RED),
 			cli.color_ansi(ansi.RESET),
 			err,
@@ -177,8 +181,8 @@ handle_new :: proc() {
 	}
 
 	if _, err := os.process_start({command = {"git", "init"}}); err != nil {
-		fmt.eprintf(
-			"%sFailed%s to initialize git repo: %v\n",
+		fmt.eprintfln(
+			"%sFailed%s to initialize git repo: %v",
 			cli.color_ansi(ansi.FG_RED),
 			cli.color_ansi(ansi.RESET),
 			err,
@@ -186,15 +190,15 @@ handle_new :: proc() {
 		os.exit(1)
 	}
 
-	fmt.printf(
-		"%s%sCreating%s binary `%s` package...\n",
+	fmt.printfln(
+		"%s%sCreating%s binary `%s` package...",
 		cli.color_ansi(ansi.BOLD),
 		cli.color_ansi(ansi.FG_CYAN),
 		cli.color_ansi(ansi.RESET),
 		project_name,
 	)
-	fmt.printf(
-		"%s%sSuccessfully%s created `%s` project\n",
+	fmt.printfln(
+		"%s%sSuccessfully%s created `%s` project",
 		cli.color_ansi(ansi.BOLD),
 		cli.color_ansi(ansi.FG_BRIGHT_GREEN),
 		cli.color_ansi(ansi.RESET),

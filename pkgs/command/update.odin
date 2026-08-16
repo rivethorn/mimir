@@ -143,4 +143,6 @@ handle_update :: proc(app_state: ^state.State) {
 		"'",
 		sep = "",
 	)
+
+	free_all(context.temp_allocator)
 }

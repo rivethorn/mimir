@@ -71,4 +71,6 @@ handle_add :: proc(app_state: ^state.State) {
 		"' to the project",
 		sep = "",
 	)
+
+	free_all(context.temp_allocator)
 }

@@ -76,4 +76,6 @@ handle_clean :: proc(app_state: ^state.State) {
 		cli.color_ansi(ansi.RESET),
 		sep = "",
 	)
+
+	free_all(context.temp_allocator)
 }

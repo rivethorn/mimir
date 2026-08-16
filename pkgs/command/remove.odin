@@ -53,4 +53,6 @@ handle_remove :: proc(app_state: ^state.State) {
 		pkg_name,
 		cli.color_ansi(ansi.RESET),
 	)
+
+	free_all(context.temp_allocator)
 }

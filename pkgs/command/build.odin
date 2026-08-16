@@ -355,5 +355,6 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 		os.exit(1)
 	}
 
+	free_all(context.temp_allocator)
 	return true
 }

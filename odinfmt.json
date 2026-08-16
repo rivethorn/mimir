@@ -3,5 +3,6 @@
     "character_width": 80,
     "tabs": true,
     "tabs_width": 4,
-    "convert_do": true
+    "convert_do": true,
+    "align_constant_definitions": true
 }

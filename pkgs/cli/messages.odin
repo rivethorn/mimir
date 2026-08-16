@@ -6,83 +6,68 @@ import "core:strings"
 import an "core:terminal/ansi"
 
 print_run_unexpected_arg :: proc(arg: string, arg_tip: bool) {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUnexpected argument%s %s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Unexpected argument ",
 		color_ansi(an.RESET),
 		arg,
-		"\n",
-		sep = "",
 	)
 	if arg_tip {
-		fmt.eprintln(
+		fmt.fprintfln(
+			os.stderr,
+			" %s%snote%s: to pass '%s%s%s' as an argument to your binary, use '%s-- %s%s'\n",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
-			" note: ",
 			color_ansi(an.RESET),
-			"to pass '",
 			color_ansi(an.FG_YELLOW),
 			arg,
 			color_ansi(an.RESET),
-			"' as an argument to your binary, use '",
 			color_ansi(an.FG_BRIGHT_BLUE),
-			"-- ",
 			arg,
 			color_ansi(an.RESET),
-			"'\n",
-			sep = "",
 		)
 	}
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage:%s mimir run%s %s[OPTIONS]%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"run ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_run_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %srun%s %s[OPTIONS]%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"run ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(
 		output,
 		"Compiles (if there are changes) and runs the project\n",
 	)
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 
 	// First pass: find the widest command name (including the short
@@ -108,9 +93,9 @@ print_run_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -119,64 +104,55 @@ print_run_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_build_unexpected_arg :: proc(arg: string) {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUnexpected argument%s %s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Unexpected argument ",
 		color_ansi(an.RESET),
 		arg,
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir build%s %s[OPTIONS]%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"build ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_build_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %sbuild%s %s[OPTIONS]%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"build ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(output, "Compiles the project if there are any changes\n")
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
@@ -201,9 +177,9 @@ print_build_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -212,100 +188,83 @@ print_build_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_new_arg_err :: proc() {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected project name%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Expected project name",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir new%s %s<project-name>%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"new ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<project-name>",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_new_name_help :: proc() {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sToo many arguments%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_YELLOW),
-		"Too many arguments ",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
 	args_arr := os.args[2:len(os.args)]
 	args_str, _ := strings.join(args_arr, " ", context.temp_allocator)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%s note:%s did you mean \"%s%s\"%s?\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		" note: ",
 		color_ansi(an.RESET),
-		"did you mean ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"\"",
 		args_str,
-		"\"",
 		color_ansi(an.RESET),
-		"?",
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_new_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %snew%s %s<project-name>%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"new ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_BLUE),
-		"<project-name>",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(output, "Creates a new Odin project\n")
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
@@ -330,9 +289,9 @@ print_new_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -341,161 +300,130 @@ print_new_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_add_arg_err :: proc() {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected package URL%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Expected package URL",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir add%s %s<package-url> %s[OPTIONS]%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"add ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-url> ",
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_add_url_err :: proc() {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sIncorrect package URL%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Incorrect package URL",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir add%s %s<package-url> %s[OPTIONS]%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"add ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-url> ",
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected format:%s example.com/owner/repo\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"Expected format: ",
 		color_ansi(an.RESET),
-		"example.com/owner/repo\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_add_name_err :: proc() {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected package name%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Expected package name",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir add%s %s<package-url> %s%s%s--name%s %s<package-name>%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"add ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-url> ",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
 		color_ansi(an.FAINT),
-		"--name ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-name>",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_add_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %sadd%s %s<package-url> %s[OPTIONS]%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"add ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-url> ",
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(output, "Adds a package to your project from URL\n")
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sExpected URL format:%s example.com/owner/repo\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"Expected URL format: ",
 		color_ansi(an.RESET),
-		"example.com/owner/repo\n",
-		sep = "",
 	)
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
@@ -520,9 +448,9 @@ print_add_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -531,68 +459,58 @@ print_add_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_remove_arg_err :: proc() {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected package name%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Expected package name",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir remove%s %s<package-name>%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"remove ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-name>",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_remove_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %sremove%s %s<package-name> %s[OPTIONS]%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"remove ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-name> ",
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(
 		output,
 		"Removes a package from your project with the given package name\n",
 	)
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
@@ -617,9 +535,9 @@ print_remove_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -628,65 +546,55 @@ print_remove_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_update_arg_err :: proc() {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected package name%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Expected package name",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir update%s %s<package-name>%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"update ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-name>",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_update_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %supdate%s %s<package-name> %s[OPTIONS]%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"update ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"<package-name> ",
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(output, "Updates a package using the upstream URL\n")
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
@@ -711,9 +619,9 @@ print_update_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -722,64 +630,55 @@ print_update_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_clean_unexpected_arg :: proc(arg: string) {
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUnexpected argument%s %s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_RED),
-		"Unexpected argument ",
 		color_ansi(an.RESET),
 		arg,
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir clean%s %s[OPTIONS]%s\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
-		"clean ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		"\n",
-		sep = "",
 	)
-	fmt.eprintln(
-		"For more information, try '",
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"--help",
 		color_ansi(an.RESET),
-		"'.",
-		sep = "",
 	)
 }
 
 print_clean_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %sclean%s %s[OPTIONS]%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"clean ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(output, "Removes all built binaries and build artifacts\n")
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
@@ -804,9 +703,9 @@ print_clean_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -815,32 +714,30 @@ print_clean_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_list_usage :: proc(output := os.stdout) {
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir %slist%s %s[OPTIONS]%s",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.FG_BRIGHT_BLUE),
-		"list ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_BLUE),
-		"[OPTIONS]",
 		color_ansi(an.RESET),
-		sep = "",
 	)
 	fmt.fprintln(
 		output,
 		"Lists all packages added by Mimir to the current project\n",
 	)
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sOptions:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Options:",
-		sep = "",
 	)
 	// First pass: find the widest command name (including the short
 	// flag suffix) so the descriptions all line up in the output.
@@ -865,9 +762,9 @@ print_list_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -876,34 +773,31 @@ print_list_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 print_general_usage :: proc(output := os.stdout) {
 	fmt.fprintln(output, "Mimir - Odin's toolchain\n")
-	fmt.fprint(
+	fmt.fprintf(
 		output,
+		"%s%sUsage: ",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Usage: ",
-		sep = "",
 	)
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%smimir%s %s[COMMAND]\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
-		"mimir ",
 		color_ansi(an.RESET),
 		color_ansi(an.FG_CYAN),
-		"[COMMAND]",
-		"\n",
-		sep = "",
 	)
-	fmt.fprintln(
+	fmt.fprintfln(
 		output,
+		"%s%sCommands:",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_GREEN),
-		"Commands:",
-		sep = "",
 	)
 
 	// First pass: find the widest command name (including the short
@@ -929,9 +823,9 @@ print_general_usage :: proc(output := os.stdout) {
 
 		padding := strings.repeat(" ", max_width - len(name) + 2)
 
-		fmt.fprintf(
+		fmt.fprintfln(
 			output,
-			"    %s%s%s%s%s%s\n",
+			"    %s%s%s%s%s%s",
 			color_ansi(an.BOLD),
 			color_ansi(an.FG_BRIGHT_CYAN),
 			name,
@@ -940,6 +834,8 @@ print_general_usage :: proc(output := os.stdout) {
 			flag.desc,
 		)
 	}
+
+	free_all(context.temp_allocator)
 }
 
 unknown_command :: proc() {

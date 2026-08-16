@@ -21,30 +21,23 @@ handle_clean :: proc(app_state: ^state.State) {
 
 	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
 
+	dbg_path, _ := filepath.join({bin_dir, "debug"}, context.temp_allocator)
+	is_dbg := os.exists(dbg_path)
+
+	rel_path, _ := filepath.join({bin_dir, "release"}, context.temp_allocator)
+	is_rel := os.exists(rel_path)
+
+	if !is_dbg && !is_rel {
+		fmt.printfln(
+			"%s%sNothing to do!%s",
+			cli.color_ansi(ansi.BOLD),
+			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
+			cli.color_ansi(ansi.RESET),
+		)
+		os.exit(0)
+	}
+
 	if app_state.config.dry_run {
-		dbg_path, _ := filepath.join(
-			{bin_dir, "debug"},
-			context.temp_allocator,
-		)
-		is_dbg := os.exists(dbg_path)
-
-		rel_path, _ := filepath.join(
-			{bin_dir, "release"},
-			context.temp_allocator,
-		)
-		is_rel := os.exists(rel_path)
-
-		if !is_dbg && !is_rel {
-			fmt.printfln(
-				"%s%sNothing to do!%s",
-				cli.color_ansi(ansi.BOLD),
-				cli.color_ansi(ansi.FG_BRIGHT_CYAN),
-				cli.color_ansi(ansi.RESET),
-			)
-
-			os.exit(0)
-		}
-
 		if is_dbg {
 			fmt.printfln(
 				"%s%sWould%s remove '%s%s%s' directory",
@@ -68,7 +61,6 @@ handle_clean :: proc(app_state: ^state.State) {
 				cli.color_ansi(ansi.RESET),
 			)
 		}
-
 		os.exit(0)
 	}
 

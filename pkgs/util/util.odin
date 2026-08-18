@@ -233,7 +233,7 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) {
 		os.exit(state.exit_code)
 	}
 
-	fmt.printf(
+	fmt.printfln(
 		"\r%sCloning %s... %s%sDone!%s",
 		cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 		pkg_name,

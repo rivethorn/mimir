@@ -14,7 +14,7 @@ import "pkgs:command"
 import "pkgs:state"
 import "pkgs:util"
 
-VERSION :: "0.12.3"
+VERSION :: "0.12.4"
 
 main :: proc() {
 	arena: mem.Dynamic_Arena

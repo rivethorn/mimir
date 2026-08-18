@@ -80,8 +80,6 @@ handle_install :: proc(app_state: ^state.State) {
 
 		pkg_name := app_state.config.name
 
-		util.clone_repo(app_state.config.url, pkg_name, tmp)
-
 		project_dir, _ := filepath.join({tmp, pkg_name})
 		pkg_path, _ := filepath.join({bin_dir, pkg_name})
 
@@ -97,6 +95,8 @@ handle_install :: proc(app_state: ^state.State) {
 			)
 			os.exit(1)
 		}
+
+		util.clone_repo(app_state.config.url, pkg_name, tmp)
 
 		project_name := filepath.base(project_dir)
 		exe_extension := ""

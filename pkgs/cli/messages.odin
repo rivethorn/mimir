@@ -827,7 +827,7 @@ print_install_usage :: proc(output := os.stdout) {
 	fmt.fprintln(output, "Installs an Odin binary\n")
 	fmt.fprintfln(
 		output,
-		"%s%snote:%s to install a local project, simply run '%smimir install%s' with no arguments\n",
+		"%s%snote:%s to install a local project, simply run '%smimir install%s' with no arguments in the project directory\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
 		color_ansi(an.RESET),

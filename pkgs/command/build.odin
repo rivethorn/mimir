@@ -57,7 +57,10 @@ get_collections :: proc(cwd: string) -> [dynamic]string {
 }
 
 @(private = "file")
-start_build :: proc(config: ^state.Command_Config) -> Build_Error {
+start_build :: proc(
+	config: ^state.Command_Config,
+	cwd: string,
+) -> Build_Error {
 	if !util.command_exists("odin") {
 		return .Command_Not_Found
 	}
@@ -65,13 +68,9 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 	output := fmt.tprintf("-out:%s", config.output)
 	release_mode := config.release ? "-o:speed" : "-o:none"
 	debug_flag := config.release ? "" : "-debug"
-	working_dir, err := os.get_working_directory(context.temp_allocator)
-	if err != nil {
-		return .No_Working_Dir
-	}
 
 	bin_dir, _ := filepath.join(
-		{working_dir, "bin", config.release ? "release" : "debug"},
+		{cwd, "bin", config.release ? "release" : "debug"},
 		context.temp_allocator,
 	)
 	if err := os.make_directory(bin_dir); err != nil {
@@ -92,10 +91,10 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 		exe_extension = ".exe"
 	}
 
-	project_name := filepath.base(working_dir)
+	project_name := filepath.base(cwd)
 	bin_path, _ := filepath.join(
 		{
-			working_dir,
+			cwd,
 			"bin",
 			config.release ? "release" : "debug",
 			project_name,
@@ -104,7 +103,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 		context.temp_allocator,
 	)
 
-	collections := get_collections(working_dir)
+	collections := get_collections(cwd)
 	defer util.delete_dynamic_strings(collections)
 
 	first_time := !os.exists(bin_path)
@@ -181,7 +180,7 @@ start_build :: proc(config: ^state.Command_Config) -> Build_Error {
 
 	build_command := os.Process_Desc {
 		command     = command[:],
-		working_dir = working_dir,
+		working_dir = cwd,
 		stderr      = os.stderr,
 		stdout      = os.stdout,
 	}
@@ -273,7 +272,12 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 	return latest_src_mod._nsec > bin_info.modification_time._nsec
 }
 
-handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
+handle_build :: proc(
+	app_state: ^state.State,
+	cwd: string = "",
+) -> (
+	rebuild: bool,
+) {
 	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
 		fmt.eprintln(
@@ -283,6 +287,10 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 			sep = "",
 		)
 		os.exit(1)
+	}
+
+	if cwd != "" {
+		project_dir = cwd
 	}
 
 	source_dir, _ := filepath.join(
@@ -342,7 +350,7 @@ handle_build :: proc(app_state: ^state.State) -> (rebuild: bool) {
 	app_state.config.src_path = "src"
 	app_state.config.output = output
 
-	build_err := start_build(&app_state.config)
+	build_err := start_build(&app_state.config, project_dir)
 	if build_err != nil {
 		fmt.eprintln(
 			cli.color_ansi(ansi.BOLD),

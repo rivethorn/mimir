@@ -8,24 +8,24 @@ import "pkgs:cli"
 import "pkgs:state"
 import "pkgs:util"
 
-@(private = "file")
-get_tmp_dir :: #force_inline proc() -> string {
-	tmp, tmp_err := os.temp_dir(context.allocator)
-	if tmp_err != nil {
-		cwd, _ := os.get_working_directory(context.allocator)
-		tmp_path, _ := filepath.join({cwd, "pkgs", "tmp"}, context.allocator)
-		if err := os.make_directory_all(tmp_path); err == nil {
-			tmp = tmp_path
-		}
-	} else {
-		tmp = fmt.tprintf("%s%s", tmp, "mimir")
-	}
+// @(private = "file")
+// get_tmp_dir :: #force_inline proc() -> string {
+// 	tmp, tmp_err := os.temp_dir(context.allocator)
+// 	if tmp_err != nil {
+// 		cwd, _ := os.get_working_directory(context.allocator)
+// 		tmp_path, _ := filepath.join({cwd, "pkgs", "tmp"}, context.allocator)
+// 		if err := os.make_directory_all(tmp_path); err == nil {
+// 			tmp = tmp_path
+// 		}
+// 	} else {
+// 		tmp = fmt.tprintf("%s%s", tmp, "mimir")
+// 	}
 
-	return tmp
-}
+// 	return tmp
+// }
 
 handle_add :: proc(app_state: ^state.State) {
-	tmp := get_tmp_dir()
+	tmp := util.get_tmp_dir()
 	os.remove_all(tmp)
 	defer os.remove_all(tmp)
 

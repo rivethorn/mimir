@@ -10,7 +10,7 @@ Command :: enum {
 	Remove,
 	Update,
 	List,
-	// Install,
+	Install,
 	// Uninstall,
 	// Toolchain,
 	Version,
@@ -18,9 +18,9 @@ Command :: enum {
 }
 
 Command_Config :: struct {
-	name, src_path, output, url: string,
-	run_args:                    []string,
-	release, silent, dry_run:    bool,
+	name, src_path, output, url:      string,
+	run_args:                         []string,
+	release, silent, dry_run, no_git: bool,
 }
 
 State :: struct {

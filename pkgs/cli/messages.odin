@@ -777,6 +777,114 @@ print_list_usage :: proc(output := os.stdout) {
 	free_all(context.temp_allocator)
 }
 
+print_install_url_err :: proc() {
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sIncorrect package URL%s\n",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		color_ansi(an.RESET),
+	)
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sUsage: %smimir install%s %s<package-url> %s[OPTIONS]%s\n",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		color_ansi(an.FG_BLUE),
+		color_ansi(an.RESET),
+	)
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected format:%s example.com/owner/repo\n",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		color_ansi(an.RESET),
+	)
+	fmt.fprintfln(
+		os.stderr,
+		"For more information, try '%s%s--help%s'.",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+		color_ansi(an.RESET),
+	)
+}
+
+print_install_usage :: proc(output := os.stdout) {
+	fmt.fprintfln(
+		output,
+		"%s%smimir %sinstall%s %s<package-url> %s[OPTIONS]%s",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		color_ansi(an.FG_BRIGHT_BLUE),
+		color_ansi(an.RESET),
+		color_ansi(an.FG_CYAN),
+		color_ansi(an.FG_BLUE),
+		color_ansi(an.RESET),
+	)
+	fmt.fprintln(output, "Installs an Odin binary\n")
+	fmt.fprintfln(
+		output,
+		"%s%snote:%s to install a local project, simply run '%smimir install%s' with no arguments\n",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		color_ansi(an.RESET),
+		color_ansi(an.FG_BLUE),
+		color_ansi(an.RESET),
+	)
+	fmt.fprintfln(
+		output,
+		"%s%sExpected URL format:%s example.com/owner/repo\n",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_CYAN),
+		color_ansi(an.RESET),
+	)
+	fmt.fprintfln(
+		output,
+		"%s%sOptions:",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_GREEN),
+	)
+	// First pass: find the widest command name (including the short
+	// flag suffix) so the descriptions all line up in the output.
+	max_width := 0
+	for flag in Install_Options {
+		width := len(flag.name)
+		if flag.short != "" {
+			width += len(flag.short) + 2 // ", " + short
+		}
+		if width > max_width {
+			max_width = width
+		}
+	}
+
+	// Second pass: print each command, padded to max_width plus a
+	// small gap before the description.
+	for flag in Install_Options {
+		name := flag.name
+		if flag.short != "" {
+			name = fmt.tprintf("%s, %s", flag.name, flag.short)
+		}
+
+		padding := strings.repeat(" ", max_width - len(name) + 2)
+
+		fmt.fprintfln(
+			output,
+			"    %s%s%s%s%s%s",
+			color_ansi(an.BOLD),
+			color_ansi(an.FG_BRIGHT_CYAN),
+			name,
+			color_ansi(an.RESET),
+			padding,
+			flag.desc,
+		)
+	}
+
+	free_all(context.temp_allocator)
+}
+
 print_general_usage :: proc(output := os.stdout) {
 	fmt.fprintln(output, "Mimir - Odin's toolchain\n")
 	fmt.fprintf(

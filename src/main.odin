@@ -8,12 +8,13 @@ import "base:runtime"
 import "core:fmt"
 import "core:mem"
 import "core:os"
+import "pkgs:args"
 import "pkgs:cli"
 import "pkgs:command"
 import "pkgs:state"
 import "pkgs:util"
 
-VERSION :: "0.10.9"
+VERSION :: "0.11.0"
 
 main :: proc() {
 	arena: mem.Dynamic_Arena
@@ -29,14 +30,14 @@ main :: proc() {
 
 	state: state.State
 
-	cli.set_main_command(&state)
+	args.set_main_command(&state)
 
 	if !util.is_general_command(state.command) && !util.is_odin_project() {
 		cli.print_no_proj()
 		os.exit(1)
 	}
 
-	cli.set_config(&state)
+	args.set_config(&state)
 
 	switch state.command {
 	case .Build:
@@ -53,6 +54,8 @@ main :: proc() {
 		command.handle_update(&state)
 	case .List:
 		command.handle_list()
+	case .Install:
+		command.handle_install(&state)
 	case .Clean:
 		command.handle_clean(&state)
 	case .Version:

@@ -42,6 +42,7 @@ Main_Commands :: [?]Flag {
 		name = "list",
 		desc = "List all packages inside the project",
 	},
+	{command = .Install, name = "install", desc = "Install an Odin binary"},
 	{
 		command = .Clean,
 		name = "clean",
@@ -72,6 +73,7 @@ Run_Options :: [?]Flag {
 }
 
 New_Options :: [?]Flag {
+	{name = "--no-git", desc = "Do not initialize a git repository"},
 	{name = "--help", short = "-h", desc = "Show help message"},
 }
 
@@ -99,6 +101,10 @@ Update_Options :: [?]Flag {
 }
 
 List_Options :: [?]Flag {
+	{name = "--help", short = "-h", desc = "Show help message"},
+}
+
+Install_Options :: [?]Flag {
 	{name = "--help", short = "-h", desc = "Show help message"},
 }
 

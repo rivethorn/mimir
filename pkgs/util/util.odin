@@ -57,6 +57,62 @@ command_exists :: proc(command_name: string) -> bool {
 	return false
 }
 
+get_mimir_path :: proc() -> string {
+	home_env: string
+	when ODIN_OS == .Windows {
+		home_env = "LOCALAPPDATA"
+	} else {
+		home_env = "HOME"
+	}
+	home := os.get_env(home_env, context.allocator)
+
+	path, err := filepath.join({home, ".mimir"})
+	if err != nil {
+		fmt.eprintln(
+			cli.color_ansi(ansi.FG_RED),
+			"Failed to determine Mimir directory",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		os.exit(1)
+	}
+
+	return path
+}
+
+get_mimir_bin_dir_path :: proc() -> string {
+	base := get_mimir_path()
+
+	path, err := filepath.join({base, "bin"})
+	if err != nil {
+		fmt.eprintln(
+			cli.color_ansi(ansi.FG_RED),
+			"Failed to determine Mimir directory",
+			cli.color_ansi(ansi.RESET),
+			sep = "",
+		)
+		os.exit(1)
+	}
+	os.make_directory_all(path)
+
+	return path
+}
+
+get_tmp_dir :: #force_inline proc() -> string {
+	tmp, tmp_err := os.temp_dir(context.allocator)
+	if tmp_err != nil {
+		mim_dir := get_mimir_path()
+		tmp_path, _ := filepath.join({mim_dir, "tmp"})
+		if err := os.make_directory_all(tmp_path); err == nil {
+			tmp = tmp_path
+		}
+	} else {
+		tmp, _ = filepath.join({tmp, "mimir"})
+	}
+
+	return tmp
+}
+
 is_odin_project :: proc() -> bool {
 	defer free_all(context.temp_allocator)
 	project_dir, err := os.get_working_directory(context.temp_allocator)
@@ -102,7 +158,7 @@ is_odin_project :: proc() -> bool {
 
 is_general_command :: proc(command: state.Command) -> bool {
 	switch command {
-	case .New, .Version, .Help, .Error:
+	case .New, .Install, .Version, .Help, .Error:
 		return true
 	case .Build, .Run, .Clean, .Add, .Remove, .Update, .List:
 		return false

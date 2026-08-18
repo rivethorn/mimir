@@ -1,0 +1,80 @@
+name: Release — build and publish mimir assets
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  ODIN_RELEASE: latest
+  REPO: rivethorn/mimir
+
+jobs:
+  build:
+    name: Build for all platforms
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+          - os: macos-latest
+            platform: macos
+            arch: x64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+          - os: windows-latest
+            platform: windows
+            arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up runner (install unzip/tar)
+        if: matrix.platform != 'windows'
+        run: |
+          sudo apt-get update -y || true
+          sudo apt-get install -y ca-certificates curl unzip tar gzip || true
+
+      - name: Build (delegated to a lightweight runner)
+        uses: ./.github/actions/run-on-matrix
+        with:
+          os: ${{ matrix.os }}
+          platform: ${{ matrix.platform }}
+          arch: ${{ matrix.arch }}
+        # NOTE: If you prefer not to use a local composite action, you can replicate the steps from CI above.
+
+      - name: Upload artifacts for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            mimir-*.tar.gz
+            mimir-*.zip
+
+  publish:
+    name: Publish release assets
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub release (if not exists) and upload assets
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

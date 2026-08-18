@@ -1,0 +1,181 @@
+name: CI — build mimir (all OS/architectures)
+
+on:
+  push:
+  pull_request:
+
+env:
+  # Change to a pinned Odin tag if you want (e.g. v0.0.0). 'latest' uses the latest Odin release.
+  ODIN_RELEASE: latest
+  REPO: rivethorn/mimir
+
+jobs:
+  build:
+    name: Build (matrix)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+          - os: macos-latest
+            platform: macos
+            arch: x64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+          - os: windows-latest
+            platform: windows
+            arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools required for downloader
+        if: runner.os != 'Windows'
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -y || true
+          sudo apt-get install -y ca-certificates curl unzip tar gzip || true
+
+      - name: Install tools required (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install -y curl zip -y
+
+      - name: Download Odin compiler (from odin-lang/Odin releases)
+        id: install_odin
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PLATFORM="${{ matrix.platform }}"
+          ARCH="${{ matrix.arch }}"
+          ODIN_RELEASE="${ODIN_RELEASE}"
+
+          # Map arch to patterns
+          if [ "${ARCH}" = "x64" ]; then
+            ARCH_PATTERN="(x86_64|amd64)"
+          else
+            ARCH_PATTERN="(arm64|aarch64)"
+          fi
+
+          # Map platform token for matching in assets
+          if [ "${PLATFORM}" = "linux" ]; then
+            OS_PAT="linux"
+            EXT=tar.gz
+          else
+            OS_PAT="macos|darwin|macOS"
+            EXT=tar.gz
+          fi
+
+          API="https://api.github.com/repos/odin-lang/Odin/releases"
+          if [ "${ODIN_RELEASE}" = "latest" ]; then
+            JSON_URL="${API}/latest"
+          else
+            JSON_URL="${API}/tags/${ODIN_RELEASE}"
+          fi
+
+          echo "Querying ${JSON_URL} for an asset matching ${OS_PAT} and ${ARCH_PATTERN}"
+          ASSET_URL=$(curl -s "${JSON_URL}" \
+            | grep "browser_download_url" \
+            | grep -i -E "${OS_PAT}" \
+            | grep -i -E "${ARCH_PATTERN}" \
+            | head -n1 \
+            | cut -d '"' -f4 || true)
+
+          if [ -z "${ASSET_URL}" ]; then
+            echo "No exact match found; listing all assets for debugging:"
+            curl -s "${JSON_URL}" | grep "browser_download_url" || true
+            exit 1
+          fi
+
+          echo "Found Odin asset: ${ASSET_URL}"
+          mkdir -p odin
+          curl -L "${ASSET_URL}" -o odin_archive.${EXT}
+          tar xzf odin_archive.${EXT} -C odin --strip-components=1
+          echo "${PWD}/odin" >> $GITHUB_PATH
+          echo "odin-path=${PWD}/odin" >> $GITHUB_OUTPUT
+
+      - name: Download Odin compiler (Windows)
+        id: install_odin_win
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $arch = "${{ matrix.arch }}"
+          if ($arch -eq "x64") { $archPattern = "x86_64|amd64" } else { $archPattern = "arm64|aarch64" }
+          $osPattern = "windows|Windows"
+          $release = "${{ env.ODIN_RELEASE }}"
+          $api = "https://api.github.com/repos/odin-lang/Odin/releases"
+          if ($release -eq "latest") { $jsonUrl = "$api/latest" } else { $jsonUrl = "$api/tags/$release" }
+          Write-Output "Querying $jsonUrl for Windows asset matching $archPattern"
+          $json = Invoke-RestMethod -Uri $jsonUrl -UseBasicParsing
+          $asset = $json.assets | Where-Object { $_.browser_download_url -match $osPattern -and $_.browser_download_url -match $archPattern } | Select-Object -First 1
+          if (-not $asset) { Write-Error "No Odin asset found for Windows/$arch"; exit 1 }
+          $assetUrl = $asset.browser_download_url
+          Write-Output "Downloading $assetUrl"
+          New-Item -ItemType Directory -Force -Path odin | Out-Null
+          Invoke-WebRequest -Uri $assetUrl -OutFile odin.zip
+          Expand-Archive -Force odin.zip -DestinationPath odin
+          Write-Output "odin-path=${{ github.workspace }}\odin" | Out-File -Encoding ASCII -FilePath $env:GITHUB_OUTPUT -Append
+          Add-Content -Path $env:GITHUB_PATH -Value "${{ github.workspace }}\odin"
+
+      - name: Show odin version
+        run: odin version
+
+      - name: Build mimir (native build)
+        shell: bash
+        env:
+          OUT: mimir
+        run: |
+          set -euxo pipefail
+          OUT="mimir"
+          if [ "${{ matrix.platform }}" = "windows" ] || [ "${{ runner.os }}" = "Windows" ]; then
+            OUT="mimir.exe"
+          fi
+          odin build src -collection:pkgs=pkgs -o:speed -out:${OUT}
+          ls -lh "${OUT}"
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          set -euxo pipefail
+          OUT="mimir"
+          ARCH="${{ matrix.arch }}"
+          PLATFORM="${{ matrix.platform }}"
+          if [ "${{ matrix.platform }}" = "windows" ] || [ "${{ runner.os }}" = "Windows" ]; then
+            OUT="mimir.exe"
+            ZIPNAME="mimir-${PLATFORM}-${ARCH}.zip"
+            if [ -f "${OUT}" ]; then
+              /usr/bin/zip -j "${ZIPNAME}" "${OUT}"
+              echo "pack=${ZIPNAME}" >> $GITHUB_OUTPUT
+            else
+              echo "No ${OUT} found to package" ; exit 1
+            fi
+          else
+            OUT="mimir"
+            TARNAME="mimir-${PLATFORM}-${ARCH}.tar.gz"
+            if [ -f "${OUT}" ]; then
+              tar -czf "${TARNAME}" "${OUT}"
+              echo "pack=${TARNAME}" >> $GITHUB_OUTPUT
+            else
+              echo "No ${OUT} found to package" ; exit 1
+            fi
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mimir-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            mimir-*.tar.gz
+            mimir-*.zip

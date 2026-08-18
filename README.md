@@ -28,17 +28,47 @@ Git is the source of truth. Mimir just holds the door open for you.
 
 ---
 
-## Installing (ish)
+## Installation
 
-You'll need Odin itself on your `PATH`, plus `git`. Right now there's no
-release pipeline to speak of — you build from source:
+There's a one-liner for each platform. Each grabs the latest [release](https://github.com/rivethorn/mimir/releases)
+from GitHub, drops it on your system, and puts it on your `PATH` for you.
+
+**Linux / macOS** (bash):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rivethorn/mimir/main/scripts/install.sh | bash
+```
+
+If you'd rather inspect it first, download the script and run it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rivethorn/mimir/main/scripts/install.sh -o install-mimir.sh
+bash install-mimir.sh
+```
+
+**Windows** (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/rivethorn/mimir/main/scripts/install.ps1 | iex
+```
+
+Open a fresh shell afterwards to pick up the PATH change — Mimir lands in
+`~/.mimir/bin` (Linux/macOS) or `%USERPROFILE%\.mimir\bin` (Windows). The
+scripts are in the repo under `scripts/` if you want to read them: `install.sh`
+and `install.ps1`.
+
+### Build from source
+
+Prefer to build it yourself? You need Odin on your `PATH` plus `git`:
 
 ```bash
 cd mimir
 odin build src -collection:pkgs=pkgs -o:speed
 ```
 
-Then put the `mimir` binary somewhere on your `PATH`. That's it.
+Then put the `mimir` binary somewhere on your `PATH`. Done.
+
+---
 
 ## The layout
 

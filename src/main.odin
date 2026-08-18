@@ -14,14 +14,13 @@ import "pkgs:command"
 import "pkgs:state"
 import "pkgs:util"
 
-VERSION :: "0.12.1"
+VERSION :: "0.12.2"
 
 main :: proc() {
 	arena: mem.Dynamic_Arena
 	mem.dynamic_arena_init(&arena)
 	context.allocator = mem.dynamic_arena_allocator(&arena)
 	defer mem.dynamic_arena_destroy(&arena)
-	defer free_all(context.temp_allocator)
 
 	if len(os.args) < 2 {
 		cli.print_general_usage(os.stderr)

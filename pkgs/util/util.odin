@@ -22,6 +22,7 @@ delete_dynamic_strings :: proc(ss: [dynamic]string) {
 }
 
 command_exists :: proc(command_name: string) -> bool {
+	defer free_all(context.temp_allocator)
 	path_env, found := os.lookup_env("PATH", context.temp_allocator)
 	if !found {return false}
 

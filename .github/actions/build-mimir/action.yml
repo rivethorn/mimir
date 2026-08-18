@@ -1,0 +1,167 @@
+name: Build mimir
+description: Install Odin, build mimir, and package the platform artifact.
+
+inputs:
+  platform:
+    required: true
+    description: Release platform name.
+  arch:
+    required: true
+    description: Release architecture name.
+  odin_os:
+    required: true
+    description: Odin release asset OS token.
+  odin_arch:
+    required: true
+    description: Odin release asset architecture token.
+  odin_ext:
+    required: true
+    description: Odin release asset archive extension.
+  odin_release:
+    required: true
+    description: Odin release tag, or latest.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Odin compiler
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        ODIN_RELEASE: ${{ inputs.odin_release }}
+        ODIN_OS: ${{ inputs.odin_os }}
+        ODIN_ARCH: ${{ inputs.odin_arch }}
+        ODIN_EXT: ${{ inputs.odin_ext }}
+      run: |
+        set -euo pipefail
+
+        api="https://api.github.com/repos/odin-lang/Odin/releases"
+        if [ "${ODIN_RELEASE}" = "latest" ]; then
+          json_url="${api}/latest"
+        else
+          json_url="${api}/tags/${ODIN_RELEASE}"
+        fi
+
+        python3 - "$json_url" "$ODIN_OS" "$ODIN_ARCH" "$ODIN_EXT" > odin_asset_url.txt <<'PY'
+        import json
+        import sys
+        import urllib.request
+
+        json_url, os_name, arch, ext = sys.argv[1:]
+        with urllib.request.urlopen(json_url) as response:
+            release = json.load(response)
+
+        suffix = f".{ext}"
+        matches = [
+            asset["browser_download_url"]
+            for asset in release.get("assets", [])
+            if os_name in asset["name"].lower()
+            and arch in asset["name"].lower()
+            and asset["name"].lower().endswith(suffix)
+        ]
+        if not matches:
+            names = "\n".join(asset["name"] for asset in release.get("assets", []))
+            raise SystemExit(f"No Odin asset matched {os_name}/{arch}/{ext}. Available assets:\n{names}")
+        print(matches[0])
+        PY
+
+        asset_url="$(cat odin_asset_url.txt)"
+        curl --fail --location --show-error --silent "$asset_url" --output "odin.${ODIN_EXT}"
+
+        mkdir -p odin
+        tar -xzf "odin.${ODIN_EXT}" -C odin --strip-components=1
+        echo "${PWD}/odin" >> "$GITHUB_PATH"
+
+    - name: Install Odin compiler
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        ODIN_RELEASE: ${{ inputs.odin_release }}
+        ODIN_OS: ${{ inputs.odin_os }}
+        ODIN_ARCH: ${{ inputs.odin_arch }}
+        ODIN_EXT: ${{ inputs.odin_ext }}
+      run: |
+        $ErrorActionPreference = "Stop"
+
+        $api = "https://api.github.com/repos/odin-lang/Odin/releases"
+        if ($env:ODIN_RELEASE -eq "latest") {
+          $jsonUrl = "$api/latest"
+        } else {
+          $jsonUrl = "$api/tags/$env:ODIN_RELEASE"
+        }
+
+        $release = Invoke-RestMethod -Uri $jsonUrl
+        $asset = $release.assets |
+          Where-Object {
+            $_.name.ToLowerInvariant().Contains($env:ODIN_OS) -and
+            $_.name.ToLowerInvariant().Contains($env:ODIN_ARCH) -and
+            $_.name.ToLowerInvariant().EndsWith(".$env:ODIN_EXT")
+          } |
+          Select-Object -First 1
+
+        if (-not $asset) {
+          $names = ($release.assets | ForEach-Object { $_.name }) -join "`n"
+          throw "No Odin asset matched $env:ODIN_OS/$env:ODIN_ARCH/$env:ODIN_EXT. Available assets:`n$names"
+        }
+
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "odin.$env:ODIN_EXT"
+        New-Item -ItemType Directory -Force -Path odin | Out-Null
+        Expand-Archive -Force "odin.$env:ODIN_EXT" -DestinationPath odin
+
+        $odin = Get-ChildItem -Path odin -Recurse -Filter odin.exe -File | Select-Object -First 1
+        if (-not $odin) {
+          throw "odin.exe was not found after extracting $($asset.name)"
+        }
+
+        Add-Content -Path $env:GITHUB_PATH -Value $odin.DirectoryName
+
+    - name: Show Odin version
+      if: runner.os != 'Windows'
+      shell: bash
+      run: odin version
+
+    - name: Show Odin version
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: odin version
+
+    - name: Check mimir
+      if: runner.os != 'Windows'
+      shell: bash
+      run: odin check src -collection:pkgs=pkgs
+
+    - name: Check mimir
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: odin check src -collection:pkgs=pkgs
+
+    - name: Build mimir
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        odin build src -collection:pkgs=pkgs -o:speed -out:mimir
+        chmod +x mimir
+
+    - name: Build mimir
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: odin build src -collection:pkgs=pkgs -o:speed -out:mimir.exe
+
+    - name: Package mimir
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        PLATFORM: ${{ inputs.platform }}
+        ARCH: ${{ inputs.arch }}
+      run: |
+        set -euo pipefail
+        tar -czf "mimir-${PLATFORM}-${ARCH}.tar.gz" mimir
+
+    - name: Package mimir
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        PLATFORM: ${{ inputs.platform }}
+        ARCH: ${{ inputs.arch }}
+      run: Compress-Archive -Force -Path mimir.exe -DestinationPath "mimir-$($env:PLATFORM)-$($env:ARCH).zip"

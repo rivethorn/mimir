@@ -5,8 +5,9 @@ import "core:os"
 import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
+import "pkgs:state"
 
-handle_new :: proc() {
+handle_new :: proc(app_state: ^state.State) {
 	project_name := os.args[2]
 
 	if strings.contains_any(project_name, `\/:*?"<>|`) ||
@@ -180,14 +181,17 @@ handle_new :: proc() {
 		os.exit(1)
 	}
 
-	if _, err := os.process_start({command = {"git", "init"}}); err != nil {
-		fmt.eprintfln(
-			"%sFailed%s to initialize git repo: %v",
-			cli.color_ansi(ansi.FG_RED),
-			cli.color_ansi(ansi.RESET),
-			err,
-		)
-		os.exit(1)
+	if !app_state.config.no_git {
+		if _, err := os.process_start({command = {"git", "init"}});
+		   err != nil {
+			fmt.eprintfln(
+				"%sFailed%s to initialize git repo: %v",
+				cli.color_ansi(ansi.FG_RED),
+				cli.color_ansi(ansi.RESET),
+				err,
+			)
+			os.exit(1)
+		}
 	}
 
 	fmt.printfln(

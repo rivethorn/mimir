@@ -13,7 +13,7 @@ import "pkgs:command"
 import "pkgs:state"
 import "pkgs:util"
 
-VERSION :: "0.10.8"
+VERSION :: "0.10.9"
 
 main :: proc() {
 	arena: mem.Dynamic_Arena
@@ -44,7 +44,7 @@ main :: proc() {
 	case .Run:
 		command.handle_run(&state)
 	case .New:
-		command.handle_new()
+		command.handle_new(&state)
 	case .Add:
 		command.handle_add(&state)
 	case .Remove:

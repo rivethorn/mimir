@@ -187,6 +187,28 @@ set_config :: proc(app_state: ^state.State) {
 				app_state.config.url = os.args[i]
 			}
 		}
+	case .Uninstall:
+		if len(os.args) < 3 {
+			cli.print_uninstall_arg_err()
+			os.exit(1)
+		}
+
+		for i := 2; i < len(os.args); i += 1 {
+			switch os.args[i] {
+			case "--help", "-h":
+				cli.print_uninstall_usage()
+				os.exit(0)
+			case "--dry-run", "-d":
+				app_state.config.dry_run = true
+			case:
+				app_state.config.name = os.args[i]
+			}
+		}
+
+		if app_state.config.name == "" {
+			cli.print_uninstall_arg_err()
+			os.exit(1)
+		}
 	case .Clean:
 		for i := 2; i < len(os.args); i += 1 {
 			switch os.args[i] {

@@ -44,6 +44,11 @@ Main_Commands :: [?]Flag {
 	},
 	{command = .Install, name = "install", desc = "Install an Odin binary"},
 	{
+		command = .Uninstall,
+		name = "uninstall",
+		desc = "Uninstall an Odin binary from your system",
+	},
+	{
 		command = .Clean,
 		name = "clean",
 		desc = "Remove all built binaries and build artifacts",
@@ -105,6 +110,15 @@ List_Options :: [?]Flag {
 }
 
 Install_Options :: [?]Flag {
+	{name = "--help", short = "-h", desc = "Show help message"},
+}
+
+Uninstall_Options :: [?]Flag {
+	{
+		name = "--dry-run",
+		short = "-d",
+		desc = "See what would happen without changing anything",
+	},
 	{name = "--help", short = "-h", desc = "Show help message"},
 }
 

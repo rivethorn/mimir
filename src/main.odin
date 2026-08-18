@@ -14,7 +14,7 @@ import "pkgs:command"
 import "pkgs:state"
 import "pkgs:util"
 
-VERSION :: "0.11.0"
+VERSION :: "0.12.1"
 
 main :: proc() {
 	arena: mem.Dynamic_Arena
@@ -56,6 +56,8 @@ main :: proc() {
 		command.handle_list()
 	case .Install:
 		command.handle_install(&state)
+	case .Uninstall:
+		command.handle_uninstall(&state)
 	case .Clean:
 		command.handle_clean(&state)
 	case .Version:

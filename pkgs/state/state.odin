@@ -11,7 +11,7 @@ Command :: enum {
 	Update,
 	List,
 	Install,
-	// Uninstall,
+	Uninstall,
 	// Toolchain,
 	Version,
 	Help,

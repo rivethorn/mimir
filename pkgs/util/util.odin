@@ -158,7 +158,7 @@ is_odin_project :: proc() -> bool {
 
 is_general_command :: proc(command: state.Command) -> bool {
 	switch command {
-	case .New, .Install, .Version, .Help, .Error:
+	case .New, .Install, .Uninstall, .Version, .Help, .Error:
 		return true
 	case .Build, .Run, .Clean, .Add, .Remove, .Update, .List:
 		return false

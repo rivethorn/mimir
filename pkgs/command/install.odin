@@ -34,6 +34,21 @@ handle_install :: proc(app_state: ^state.State) {
 		}
 
 		project_name := filepath.base(project_dir)
+		pkg_path, _ := filepath.join({bin_dir, project_name})
+
+		if os.exists(pkg_path) {
+			fmt.eprintfln(
+				"%s%sError:%s Package '%s%s%s' is already installed on your system",
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_RED),
+				cli.color_ansi(ansi.RESET),
+				cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
+				project_name,
+				cli.color_ansi(ansi.RESET),
+			)
+			os.exit(1)
+		}
+
 		exe_extension := ""
 		when ODIN_OS == .Windows {
 			exe_extension = ".exe"
@@ -68,6 +83,20 @@ handle_install :: proc(app_state: ^state.State) {
 		util.clone_repo(app_state.config.url, pkg_name, tmp)
 
 		project_dir, _ := filepath.join({tmp, pkg_name})
+		pkg_path, _ := filepath.join({bin_dir, pkg_name})
+
+		if os.exists(pkg_path) {
+			fmt.eprintfln(
+				"%s%sError:%s Package '%s%s%s' is already installed on your system",
+				cli.color_ansi(ansi.BOLD),
+				cli.color_ansi(ansi.FG_BRIGHT_RED),
+				cli.color_ansi(ansi.RESET),
+				cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
+				pkg_name,
+				cli.color_ansi(ansi.RESET),
+			)
+			os.exit(1)
+		}
 
 		project_name := filepath.base(project_dir)
 		exe_extension := ""

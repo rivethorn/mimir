@@ -30,13 +30,15 @@ handle_run :: proc(app_state: ^state.State) {
 	}
 
 	project_name := filepath.base(project_dir)
+
+	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+
 	bin_path, _ := filepath.join(
 		{
 			project_dir,
 			"bin",
 			app_state.config.release ? "release" : "debug",
-			project_name,
-			exe_extension,
+			exe_name,
 		},
 		context.temp_allocator,
 	)

@@ -92,14 +92,11 @@ start_build :: proc(
 	}
 
 	project_name := filepath.base(cwd)
+
+	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+
 	bin_path, _ := filepath.join(
-		{
-			cwd,
-			"bin",
-			config.release ? "release" : "debug",
-			project_name,
-			exe_extension,
-		},
+		{cwd, "bin", config.release ? "release" : "debug", exe_name},
 		context.temp_allocator,
 	)
 
@@ -305,15 +302,17 @@ handle_build :: proc(
 		exe_extension = ".exe"
 	}
 
+	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+
 	output: string
 	if app_state.config.release {
 		output, _ = filepath.join(
-			{"bin", "release", project_name, exe_extension},
+			{"bin", "release", exe_name},
 			context.allocator,
 		)
 	} else {
 		output, _ = filepath.join(
-			{"bin", "debug", project_name, exe_extension},
+			{"bin", "debug", exe_name},
 			context.allocator,
 		)
 	}

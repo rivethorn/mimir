@@ -54,8 +54,10 @@ handle_install :: proc(app_state: ^state.State) {
 			exe_extension = ".exe"
 		}
 
+		exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+
 		output_bin, _ := filepath.join(
-			{project_dir, "bin", "release", project_name, exe_extension},
+			{project_dir, "bin", "release", exe_name},
 		)
 
 		handle_build(app_state)
@@ -99,12 +101,16 @@ handle_install :: proc(app_state: ^state.State) {
 		util.clone_repo(app_state.config.url, pkg_name, tmp)
 
 		project_name := filepath.base(project_dir)
+
 		exe_extension := ""
 		when ODIN_OS == .Windows {
 			exe_extension = ".exe"
 		}
+
+		exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+
 		output_bin, _ := filepath.join(
-			{project_dir, "bin", "release", project_name, exe_extension},
+			{project_dir, "bin", "release", exe_name},
 		)
 
 		handle_build(app_state, project_dir)

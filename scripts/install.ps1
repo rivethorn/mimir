@@ -42,7 +42,7 @@ try
     }
 
     # Place the downloaded binary directly at the destination (no bootstrap)
-    $target = Join-Path $env:USERPROFILE ".mimir\bin"
+    $target = Join-Path $env:LOCALAPPDATA ".mimir\bin"
     New-Item -ItemType Directory -Force -Path $target | Out-Null
     Copy-Item -Force $mimir.FullName (Join-Path $target "mimir.exe")
     Write-Output "Installed mimir to $target\mimir.exe"
@@ -54,7 +54,7 @@ try
     { $parts = @($userPath -split ";") | Where-Object { $_ -ne "" }
     }
 
-    if (-not ($parts -inotcontains $target))
+    if ($parts -inotcontains $target)
     {
         $parts += $target
         [Environment]::SetEnvironmentVariable("Path", $parts -join ";", "User")
@@ -63,17 +63,6 @@ try
     } else
     {
         Write-Output "$target is already on PATH."
-    }
-
-    # Ensure future PowerShell sessions pick it up too
-    $profileFile = $PROFILE.CurrentUserAllHosts
-    if (-not (Test-Path $profileFile))
-    { New-Item -ItemType File -Force -Path $profileFile | Out-Null
-    }
-    $line = "if (-not (`$env:PATH -like '*$target*')) { `$env:PATH = `"$target;`$env:PATH`" }"
-    if (-not (Select-String -Path $profileFile -Pattern [regex]::Escape($line) -Quiet))
-    {
-        Add-Content -Path $profileFile -Value $line
     }
 
     Write-Output "Install complete."

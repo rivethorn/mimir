@@ -2,8 +2,8 @@
 # Install script for Linux/macOS:
 # - detects OS/arch, downloads the latest mimir release artifact from GitHub,
 # - extracts to temporary dir,
-# - runs ./mimir install github.com/rivethorn/mimir (bootstrap),
-# - ensures $HOME/.mimir/bin is on PATH for common shells,
+# - copies the downloaded binary directly into ~/.mimir/bin,
+# - ensures ~/.mimir/bin is on PATH for common shells,
 # - cleans up.
 set -euo pipefail
 
@@ -90,13 +90,11 @@ fi
 
 chmod +x "$MIMIR_BIN"
 
-# Run bootstrap install (the downloaded mimir will install itself)
-echo "Running bootstrap: $MIMIR_BIN install github.com/rivethorn/mimir"
-# Pass through arguments, but ensure non-interactive
-"$MIMIR_BIN" install github.com/rivethorn/mimir
-
-# Ensure install location exists (~/.mimir/bin)
+# Place the downloaded binary directly at the destination (no bootstrap)
 mkdir -p "$OUTDIR"
+cp "$MIMIR_BIN" "$OUTDIR/mimir"
+chmod +x "$OUTDIR/mimir"
+echo "Installed mimir to $OUTDIR/mimir"
 
 # Add ~/.mimir/bin to PATH in common shells (idempotent)
 EXPORT_LINE='export PATH="$HOME/.mimir/bin:$PATH"'
@@ -123,5 +121,5 @@ if [ ! -f "${FISH_FILE}" ] || ! grep -qxF "${FISH_LINE}" "${FISH_FILE}"; then
     printf "%s\n" "${FISH_LINE}" >"${FISH_FILE}"
 fi
 
-echo "Bootstrap finished. Cleaned temp files."
+echo "Install finished. Cleaned up temp files."
 echo "Ensure you open a new shell or source your profile to pick up PATH changes."

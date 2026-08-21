@@ -1,8 +1,8 @@
 <#
 PowerShell install script for Windows.
 - Downloads the latest mimir release asset for Windows + arch from GitHub,
-- extracts to temp, runs mimir.exe install github.com/rivethorn/mimir,
-- ensures %USERPROFILE%\.mimir\bin is in the user PATH,
+- extracts to temp, copies mimir.exe directly into %USERPROFILE%\.mimir\bin,
+- ensures the install dir is on the user PATH,
 - cleans up.
 
 Usage: Run in PowerShell (may need to set ExecutionPolicy for the session):
@@ -26,7 +26,7 @@ try
     $json = Invoke-RestMethod -Uri $api -UseBasicParsing
     $asset = $json.assets | Where-Object { $_.browser_download_url -match $osPat -and $_.browser_download_url -match $arch } | Select-Object -First 1
     if (-not $asset)
-    { Write-Error "No asset found for Windows/$arch"; exit 1 
+    { Write-Error "No asset found for Windows/$arch"; exit 1
     }
 
     $url = $asset.browser_download_url
@@ -38,35 +38,37 @@ try
 
     $mimir = Get-ChildItem -Path (Join-Path $temp "extracted") -Recurse -Filter "mimir.exe" -File | Select-Object -First 1
     if (-not $mimir)
-    { Write-Error "mimir.exe not found in archive"; exit 1 
+    { Write-Error "mimir.exe not found in archive"; exit 1
     }
 
-    & $mimir.FullName install github.com/rivethorn/mimir
-
+    # Place the downloaded binary directly at the destination (no bootstrap)
     $target = Join-Path $env:USERPROFILE ".mimir\bin"
-    if (-not (Test-Path $target))
-    { New-Item -ItemType Directory -Force -Path $target | Out-Null 
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
+    Copy-Item -Force $mimir.FullName (Join-Path $target "mimir.exe")
+    Write-Output "Installed mimir to $target\mimir.exe"
+
+    # Add $target to the user PATH (case-insensitive, no duplicates)
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $parts = @()
+    if (-not [string]::IsNullOrEmpty($userPath))
+    { $parts = @($userPath -split ";") | Where-Object { $_ -ne "" }
     }
 
-    $current = [Environment]::GetEnvironmentVariable("Path","User")
-    if ($current -notlike "*$target*")
+    if (-not ($parts -inotcontains $target))
     {
-        $new = if ([string]::IsNullOrEmpty($current))
-        { $target 
-        } else
-        { "$current;$target" 
-        }
-        [Environment]::SetEnvironmentVariable("Path",$new,"User")
-        Write-Output "Added $target to user PATH. Restart terminals/apps to pick up."
+        $parts += $target
+        [Environment]::SetEnvironmentVariable("Path", $parts -join ";", "User")
+        $env:PATH = "$target;$env:PATH"
+        Write-Output "Added $target to PATH. Restart terminals/apps to pick up."
     } else
     {
-        Write-Output "$target already in user PATH."
+        Write-Output "$target is already on PATH."
     }
 
-    # Add to PowerShell profile for immediate sessions
+    # Ensure future PowerShell sessions pick it up too
     $profileFile = $PROFILE.CurrentUserAllHosts
     if (-not (Test-Path $profileFile))
-    { New-Item -ItemType File -Force -Path $profileFile | Out-Null 
+    { New-Item -ItemType File -Force -Path $profileFile | Out-Null
     }
     $line = "if (-not (`$env:PATH -like '*$target*')) { `$env:PATH = `"$target;`$env:PATH`" }"
     if (-not (Select-String -Path $profileFile -Pattern [regex]::Escape($line) -Quiet))
@@ -74,7 +76,7 @@ try
         Add-Content -Path $profileFile -Value $line
     }
 
-    Write-Output "Bootstrap install complete."
+    Write-Output "Install complete."
 } finally
 {
     Remove-Item -Recurse -Force $temp

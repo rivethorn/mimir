@@ -66,6 +66,7 @@ Option :: struct {
 	name:        string, // Long name (e.g., "verbose")
 	short:       string, // Short name (e.g., "v"), empty if none
 	description: string, // Help text
+	notes:       [dynamic]string, // Extra note lines shown under this option in help
 	type_info:   Arg_Type_Info,
 	default_str: string, // Default value as string (empty if none)
 	required:    bool,
@@ -78,9 +79,12 @@ Option :: struct {
 // ============================================================================
 
 // Argument defines a positional argument, matched in declaration order.
+//
+// notes are extra lines shown under this argument in the help page.
 Argument :: struct {
 	name:        string, // Name for help display
 	description: string, // Help text
+	notes:       [dynamic]string, // Extra note lines shown under this argument
 	type_info:   Arg_Type_Info,
 	required:    bool,
 	variadic:    bool, // Consumes all remaining args
@@ -103,12 +107,13 @@ Command :: struct {
 	name:        string,
 	description: string,
 	long_desc:   string, // Extended description (shown with --help)
+	notes:       [dynamic]string, // Extra note lines shown in this command's help
 	options:     [dynamic]Option,
 	arguments:   [dynamic]Argument,
 	subcommands: [dynamic]Command,
 	handler:     Command_Handler,
 	hidden:      bool,
-	aliases:     []string, // Alternative names
+	alias:       string, // Alternative name
 }
 
 // ============================================================================
@@ -257,8 +262,8 @@ Error :: struct {
 // (`-flag:value` or `-flag=value`), and underscores in flag names are
 // treated as dashes (`-no_git` matches an option named `no-git`).
 Parsing_Style :: enum {
-	Unix,
 	Odin,
+	Unix,
 }
 
 // CLI is the top-level application descriptor: name, version, description,
@@ -267,7 +272,6 @@ Parsing_Style :: enum {
 CLI :: struct {
 	name:          string,
 	version:       string,
-	description:   string,
 	root_cmd:      ^Command,
 	color_enabled: bool,
 	style:         Parsing_Style,

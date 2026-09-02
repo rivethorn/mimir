@@ -5,16 +5,15 @@ import "core:os"
 import "core:path/filepath"
 import "core:terminal/ansi"
 import "pkgs:cli"
+import "pkgs:reflags"
 import "pkgs:state"
 
 handle_clean :: proc(app_state: ^state.State) {
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_RED),
-			"Failed to determine project name",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
+		reflags.command_error(
+			"mimir clean",
+			"Failed to determine project directory",
 		)
 		os.exit(1)
 	}

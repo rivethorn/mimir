@@ -6,11 +6,11 @@ package reflags
 
 // Preset Arg_Type_Info values for the common primitive types; pass these
 // to opt_type / arg_type.
-string_type :: Arg_Type_Info{Arg_Type.String, nil, nil}
-int_type :: Arg_Type_Info{Arg_Type.Int, nil, nil}
-float_type :: Arg_Type_Info{Arg_Type.Float, nil, nil}
-bool_type :: Arg_Type_Info{Arg_Type.Bool, nil, nil}
-path_type :: Arg_Type_Info{Arg_Type.Path, nil, nil}
+string_type :: Arg_Type_Info{.String, nil, nil}
+int_type :: Arg_Type_Info{.Int, nil, nil}
+float_type :: Arg_Type_Info{.Float, nil, nil}
+bool_type :: Arg_Type_Info{.Bool, nil, nil}
+path_type :: Arg_Type_Info{.Path, nil, nil}
 
 // enum_type creates an Enum Arg_Type_Info restricted to the given values.
 // The values are copied to a stable heap allocation so they outlive the
@@ -19,11 +19,11 @@ enum_type :: proc(values: []string) -> Arg_Type_Info {
 	// Copy values to a stable heap allocation, since the original
 	// slice literals may be allocated on context.temp_allocator
 	// which can be reset between function calls.
-	result := make([dynamic]string, context.allocator)
+	result := make([dynamic]string)
 	for v in values {
 		append(&result, v)
 	}
-	return Arg_Type_Info{Arg_Type.Enum, result[:], nil}
+	return Arg_Type_Info{.Enum, result[:], nil}
 }
 
 
@@ -32,7 +32,7 @@ enum_type :: proc(values: []string) -> Arg_Type_Info {
 custom_type :: proc(
 	parse_fn: proc(_: string) -> (any, ^Error),
 ) -> Arg_Type_Info {
-	return Arg_Type_Info{Arg_Type.Custom, nil, parse_fn}
+	return Arg_Type_Info{.Custom, nil, parse_fn}
 }
 
 // ============================================================================
@@ -99,6 +99,13 @@ opt_type :: proc(b: ^Option_Builder, t: Arg_Type_Info) -> bool {
 }
 
 // Build into a final Option
+// opt_note appends an extra note shown under this option-in-progress in help.
+// May be called multiple times; each note appears on its own line.
+opt_note :: proc(b: ^Option_Builder, note: string) -> bool {
+	append(&b.opt.notes, note)
+	return true
+}
+
 // opt_build finalizes the builder and returns the constructed Option.
 opt_build :: proc(b: Option_Builder) -> Option {
 	return b.opt
@@ -283,6 +290,13 @@ arg_hidden :: proc(b: ^Argument_Builder) -> bool {
 	return true
 }
 
+// arg_note appends an extra note shown under this argument-in-progress in
+// help. May be called multiple times; each note appears on its own line.
+arg_note :: proc(b: ^Argument_Builder, note: string) -> bool {
+	append(&b.arg.notes, note)
+	return true
+}
+
 // arg_build finalizes the builder and returns the constructed Argument.
 arg_build :: proc(b: Argument_Builder) -> Argument {
 	return b.arg
@@ -302,10 +316,11 @@ Command_Builder :: struct {
 // command creates a Command with the given name and description.
 // Populate it directly (options, arguments, subcommands, handler) or use
 // command_builder for a chained style.
-command :: proc(name, description: string) -> Command {
+command :: proc(name: string, description: Maybe(string)) -> Command {
+	desc, ok := description.?
 	return Command {
 		name = name,
-		description = description,
+		description = ok ? desc : "",
 		long_desc = "",
 		handler = nil,
 		hidden = false,
@@ -330,6 +345,26 @@ command_builder :: proc(name, description: string) -> Command_Builder {
 cmd_long_desc :: proc(b: ^Command_Builder, desc: string) -> bool {
 	b.cmd.long_desc = desc
 	return true
+}
+
+// cmd_note appends an extra note to a Command while it's being built.
+// May be called multiple times; each note appears on its own line.
+cmd_note :: proc(b: ^Command_Builder, note: string) -> bool {
+	append(&b.cmd.notes, note)
+	return true
+}
+
+// option_note appends an extra note to an already-built Option.
+// Convenient when constructing an Option with opt_flag/opt_str/etc. and
+// you still want to attach notes before adding it to a command.
+option_note :: proc(opt: ^Option, note: string) {
+	append(&opt.notes, note)
+}
+
+// command_note appends an extra note to an already-built Command.
+// Convenient when constructing a Command with `command` directly.
+command_note :: proc(c: ^Command, note: string) {
+	append(&c.notes, note)
 }
 
 // cmd_add_option appends an option to the command.
@@ -363,8 +398,8 @@ cmd_hide :: proc(b: ^Command_Builder) -> bool {
 }
 
 // cmd_set_aliases sets alternative names that match this command.
-cmd_set_aliases :: proc(b: ^Command_Builder, aliases: []string) -> bool {
-	b.cmd.aliases = aliases
+cmd_set_aliase :: proc(b: ^Command_Builder, alias: string) -> bool {
+	b.cmd.alias = alias
 	return true
 }
 
@@ -378,25 +413,20 @@ cmd_build :: proc(b: Command_Builder) -> Command {
 // ============================================================================
 
 // make_cli creates a CLI descriptor with color output enabled.
-make_cli :: proc(name, version, description: string, root: ^Command) -> CLI {
+make_cli :: proc(name, version: string, root: ^Command) -> CLI {
 	return CLI {
 		name = name,
 		version = version,
-		description = description,
 		root_cmd = root,
 		color_enabled = true,
 	}
 }
 
 // make_cli_no_color creates a CLI descriptor with color output disabled.
-make_cli_no_color :: proc(
-	name, version, description: string,
-	root: ^Command,
-) -> CLI {
+make_cli_no_color :: proc(name, version: string, root: ^Command) -> CLI {
 	return CLI {
 		name = name,
 		version = version,
-		description = description,
 		root_cmd = root,
 		color_enabled = false,
 	}
@@ -470,7 +500,7 @@ color_option :: proc() -> Option {
 	return Option {
 		name = "color",
 		description = "Coloring: auto, always, never",
-		type_info = enum_type([]string{"auto", "always", "never"}),
+		type_info = enum_type({"auto", "always", "never"}),
 		default_str = "auto",
 	}
 }

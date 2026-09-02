@@ -144,11 +144,9 @@ try_match_subcommand :: proc(ctx: ^Parse_Ctx, name: string) -> bool {
 			return true
 		}
 		// Check aliases
-		for alias in cmd.aliases {
-			if alias == name {
-				ctx.current_cmd = cmd
-				return true
-			}
+		if cmd.alias == name {
+			ctx.current_cmd = cmd
+			return true
 		}
 	}
 	return false
@@ -713,14 +711,12 @@ parse_options_and_args_odin :: proc(ctx: ^Parse_Ctx) -> ^Error {
 			continue
 		}
 
-		// Odin-style flag: -flag, -flag:value, -flag=value
+		// Odin-style flag: -flag, -flag:value
 		body := arg[1:]
 		name := body
 		value := ""
 		has_value := false
-		if eq_idx := strings.index_byte(body, '='); eq_idx != -1 {
-			name, value, has_value = body[:eq_idx], body[eq_idx + 1:], true
-		} else if colon_idx := strings.index_byte(body, ':'); colon_idx != -1 {
+		if colon_idx := strings.index_byte(body, ':'); colon_idx != -1 {
 			name, value, has_value =
 				body[:colon_idx], body[colon_idx + 1:], true
 		}
@@ -767,7 +763,7 @@ parse_options_and_args_odin :: proc(ctx: ^Parse_Ctx) -> ^Error {
 				return make_error(
 					.Missing_Required_Option,
 					fmt.tprintf(
-						"Option -%s requires a value (-%s:value or -%s=value)",
+						"Option -%s requires a value (-%s:value)",
 						name,
 						name,
 						name,

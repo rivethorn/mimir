@@ -5,6 +5,7 @@ import "core:os"
 import "core:path/filepath"
 import "core:terminal/ansi"
 import "pkgs:cli"
+import "pkgs:reflags"
 import "pkgs:state"
 import "pkgs:util"
 
@@ -14,15 +15,14 @@ handle_uninstall :: proc(app_state: ^state.State) {
 	pkg_path, _ := filepath.join({bin_dir, pkg_name}, context.temp_allocator)
 
 	if !os.exists(pkg_path) {
-		fmt.eprintfln(
-			"%s%sError:%s Package '%s%s%s' is not installed on your system",
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			cli.color_ansi(ansi.RESET),
-			cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
-			pkg_name,
-			cli.color_ansi(ansi.RESET),
+		reflags.command_error(
+			"mimir uninstall",
+			fmt.tprintf(
+				"Package '%s' is not installed on your system",
+				pkg_name,
+			),
 		)
+		reflags.error_hint("uninstall")
 		os.exit(1)
 	}
 

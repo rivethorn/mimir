@@ -45,7 +45,7 @@ command_exists :: proc(command_name: string) -> bool {
 	for dir in path_list {
 		if dir == "" {continue}
 
-		full_path, err := filepath.join(
+		full_path, _ := filepath.join(
 			[]string{dir, target_file},
 			context.temp_allocator,
 		)

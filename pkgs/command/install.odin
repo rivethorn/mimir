@@ -5,19 +5,17 @@ import "core:os"
 import "core:path/filepath"
 import "core:terminal/ansi"
 import "pkgs:cli"
+import "pkgs:reflags"
 import "pkgs:state"
 import "pkgs:util"
 
 handle_install :: proc(app_state: ^state.State) {
-	if len(os.args) < 3 {
-		cli.print_install_arg_err()
-		cli.print_install_usage(os.stderr)
-		os.exit(1)
-	}
-
-	if app_state.config.url == "." && !util.is_odin_project() {
-		cli.print_no_proj()
-		cli.print_install_usage(os.stderr)
+	if app_state.config.url == "" {
+		reflags.command_error(
+			"mimir install",
+			"Missing REPO argument — provide a URL, or use '.' to install the current project.",
+		)
+		reflags.error_hint("install")
 		os.exit(1)
 	}
 
@@ -30,11 +28,9 @@ handle_install :: proc(app_state: ^state.State) {
 	if app_state.config.url == "."  /* local project */{
 		project_dir, err := os.get_working_directory(context.allocator)
 		if err != nil {
-			fmt.eprintln(
-				cli.color_ansi(ansi.FG_RED),
-				"Failed to determine project name",
-				cli.color_ansi(ansi.RESET),
-				sep = "",
+			reflags.command_error(
+				"mimir install",
+				"Failed to determine project directory",
 			)
 			os.exit(1)
 		}
@@ -43,14 +39,12 @@ handle_install :: proc(app_state: ^state.State) {
 		pkg_path, _ := filepath.join({bin_dir, project_name})
 
 		if os.exists(pkg_path) {
-			fmt.eprintfln(
-				"%s%sError:%s Package '%s%s%s' is already installed on your system",
-				cli.color_ansi(ansi.BOLD),
-				cli.color_ansi(ansi.FG_BRIGHT_RED),
-				cli.color_ansi(ansi.RESET),
-				cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
-				project_name,
-				cli.color_ansi(ansi.RESET),
+			reflags.command_error(
+				"mimir install",
+				fmt.tprintf(
+					"Package '%s' is already installed on your system",
+					project_name,
+				),
 			)
 			os.exit(1)
 		}
@@ -69,12 +63,7 @@ handle_install :: proc(app_state: ^state.State) {
 		handle_build(app_state)
 
 		if err := os.copy_directory_all(bin_dir, output_bin); err != nil {
-			fmt.eprintln(
-				cli.color_ansi(ansi.FG_RED),
-				"\nFailed to move binary",
-				cli.color_ansi(ansi.RESET),
-				sep = "",
-			)
+			reflags.command_error("mimir install", "Failed to install binary")
 			os.exit(1)
 		}
 
@@ -92,15 +81,14 @@ handle_install :: proc(app_state: ^state.State) {
 		pkg_path, _ := filepath.join({bin_dir, pkg_name})
 
 		if os.exists(pkg_path) {
-			fmt.eprintfln(
-				"%s%sError:%s Package '%s%s%s' is already installed on your system",
-				cli.color_ansi(ansi.BOLD),
-				cli.color_ansi(ansi.FG_BRIGHT_RED),
-				cli.color_ansi(ansi.RESET),
-				cli.color_ansi(ansi.FG_BRIGHT_YELLOW),
-				pkg_name,
-				cli.color_ansi(ansi.RESET),
+			reflags.command_error(
+				"mimir install",
+				fmt.tprintf(
+					"Package '%s' is already installed on your system",
+					pkg_name,
+				),
 			)
+			reflags.error_hint("install")
 			os.exit(1)
 		}
 
@@ -122,12 +110,7 @@ handle_install :: proc(app_state: ^state.State) {
 		handle_build(app_state, project_dir)
 
 		if err := os.copy_directory_all(bin_dir, output_bin); err != nil {
-			fmt.eprintln(
-				cli.color_ansi(ansi.FG_RED),
-				"\nFailed to move binary",
-				cli.color_ansi(ansi.RESET),
-				sep = "",
-			)
+			reflags.command_error("mimir install", "Failed to install binary")
 			os.exit(1)
 		}
 

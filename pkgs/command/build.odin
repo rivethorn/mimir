@@ -6,8 +6,8 @@ import "core:fmt"
 import "core:os"
 import "core:path/filepath"
 import "core:terminal/ansi"
-import "core:time"
 import "pkgs:cli"
+import "pkgs:reflags"
 import "pkgs:state"
 import "pkgs:util"
 
@@ -26,22 +26,18 @@ get_collections :: proc(cwd: string) -> [dynamic]string {
 
 	config_file, err := os.read_entire_file("ols.json", context.temp_allocator)
 	if err != nil {
-		fmt.eprintf(
-			"%sFailed%s to read ols.json file: %v\n",
-			cli.color_ansi(ansi.FG_RED),
-			cli.color_ansi(ansi.RESET),
-			err,
+		reflags.command_error(
+			"mimir build",
+			fmt.tprintf("Failed to read ols.json file: %v", err),
 		)
 		os.exit(1)
 	}
 
 	json_err := json.unmarshal(config_file, &config)
 	if json_err != nil {
-		fmt.eprintf(
-			"%sFailed%s to parse ols.json: %v\n",
-			cli.color_ansi(ansi.FG_RED),
-			cli.color_ansi(ansi.RESET),
-			err,
+		reflags.command_error(
+			"mimir build",
+			fmt.tprintf("Failed to parse ols.json: %v", err),
 		)
 		os.exit(1)
 	}
@@ -75,12 +71,13 @@ start_build :: proc(
 	)
 	if err := os.make_directory(bin_dir); err != nil {
 		if !os.exists(bin_dir) {
-			fmt.eprintf(
-				"%sFailed%s to create directory %q: %v\n",
-				cli.color_ansi(ansi.FG_RED),
-				cli.color_ansi(ansi.RESET),
-				bin_dir,
-				err,
+			reflags.command_error(
+				"mimir build",
+				fmt.tprintf(
+					"Failed to create directory '%s': %v",
+					bin_dir,
+					err,
+				),
 			)
 			os.exit(1)
 		}
@@ -189,21 +186,18 @@ start_build :: proc(
 	state, _ := os.process_wait(build_process)
 
 	if !config.silent && state.exit_code != 0 {
-		fmt.eprintln(
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"Compilation Failed\n",
-			cli.color_ansi(ansi.RESET),
-			"exit code: ",
-			state.exit_code,
-			"\n",
-			sep = "",
+		reflags.command_error(
+			"mimir build",
+			fmt.tprintf("Compilation failed (exit code: %d)", state.exit_code),
 		)
 		os.exit(state.exit_code)
 	}
 
 	if config.silent && state.exit_code != 0 {
-		fmt.eprintln("exit code", state.exit_code)
+		reflags.command_error(
+			"mimir build",
+			fmt.tprintf("Compilation failed (exit code: %d)", state.exit_code),
+		)
 		os.exit(state.exit_code)
 	}
 
@@ -233,7 +227,10 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 
 	src_info, src_err := os.stat(source_path, context.temp_allocator)
 	if src_err != nil {
-		fmt.eprintf("Source path error: %v\n", src_err)
+		reflags.command_error(
+			"mimir build",
+			fmt.tprintf("Source path error: %v", src_err),
+		)
 		return true
 	}
 
@@ -276,11 +273,9 @@ handle_build :: proc(
 ) {
 	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_RED),
-			"Failed to determine project name",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
+		reflags.command_error(
+			"mimir build",
+			"Failed to determine project directory",
 		)
 		os.exit(1)
 	}
@@ -333,12 +328,13 @@ handle_build :: proc(
 	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
 	if err := os.make_directory(bin_dir); err != nil {
 		if !os.exists(bin_dir) {
-			fmt.eprintf(
-				"%sFailed%s to create directory %q: %v\n",
-				cli.color_ansi(ansi.FG_RED),
-				cli.color_ansi(ansi.RESET),
-				bin_dir,
-				err,
+			reflags.command_error(
+				"mimir build",
+				fmt.tprintf(
+					"Failed to create directory '%s': %v",
+					bin_dir,
+					err,
+				),
 			)
 			os.exit(1)
 		}
@@ -350,14 +346,7 @@ handle_build :: proc(
 
 	build_err := start_build(&app_state.config, project_dir)
 	if build_err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"Build Error: ",
-			cli.color_ansi(ansi.RESET),
-			build_err,
-			sep = "",
-		)
+		reflags.command_error("mimir build", fmt.tprintf("%v", build_err))
 		os.exit(1)
 	}
 

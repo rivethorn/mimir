@@ -1,7 +1,6 @@
 package reflags
 
 import "core:fmt"
-import "core:io"
 import "core:os"
 import "core:strings"
 
@@ -80,7 +79,7 @@ get_style :: proc(cli: ^CLI) -> style_set {
 
 // print_usage writes the compact usage form (usage line, description,
 // options, arguments, subcommands) for cmd (or the root command) to out.
-print_usage :: proc(cli: ^CLI, out: io.Writer, cmd: ^Command = nil) {
+print_usage :: proc(cli: ^CLI, out: ^os.File, cmd: ^Command = nil) {
 	s := get_style(cli)
 	target := cmd
 	if target == nil {
@@ -117,13 +116,13 @@ print_usage :: proc(cli: ^CLI, out: io.Writer, cmd: ^Command = nil) {
 		write_subcommands(&builder, s, target)
 	}
 
-	fmt.wprint(out, strings.to_string(builder))
+	fmt.fprint(out, strings.to_string(builder))
 }
 
 // print_help writes the full help page (header, usage, long description,
 // options, arguments, subcommands, and the global hint on the root
 // command) for cmd (or the root command) to out.
-print_help :: proc(cli: ^CLI, out: io.Writer, cmd: ^Command = nil) {
+print_help :: proc(cli: ^CLI, out: ^os.File, cmd: ^Command = nil) {
 	s := get_style(cli)
 	target := cmd
 	if target == nil {
@@ -135,19 +134,25 @@ print_help :: proc(cli: ^CLI, out: io.Writer, cmd: ^Command = nil) {
 
 	// Header
 	write_header(&builder, s, cli, target)
-	strings.write_byte(&builder, '\n')
+	// strings.write_byte(&builder, '\n')
+
+	// Long description
+	if len(target.long_desc) > 0 {
+		write_wrapped(&builder, target.long_desc, 80, "")
+		strings.write_byte(&builder, '\n')
+	} else if len(target.description) > 0 {
+		write_wrapped(&builder, target.description, 80, "")
+		strings.write_byte(&builder, '\n')
+	}
 
 	// Usage
 	write_usage_line(&builder, s, cli, target)
 	strings.write_byte(&builder, '\n')
 
-	// Long description
-	if len(target.long_desc) > 0 {
+	// Command notes
+	if len(target.notes) > 0 {
 		strings.write_byte(&builder, '\n')
-		write_wrapped(&builder, target.long_desc, 80, "  ")
-	} else if len(target.description) > 0 {
-		strings.write_byte(&builder, '\n')
-		write_wrapped(&builder, target.description, 80, "  ")
+		write_notes(&builder, s, target.notes, "  ")
 	}
 
 	// Options
@@ -174,15 +179,15 @@ print_help :: proc(cli: ^CLI, out: io.Writer, cmd: ^Command = nil) {
 		write_global_hint(&builder, s, cli)
 	}
 
-	fmt.wprint(out, strings.to_string(builder))
+	fmt.fprint(out, strings.to_string(builder))
 }
 
 // print_version writes the CLI name and version to out.
-print_version :: proc(cli: ^CLI, out: io.Writer) {
+print_version :: proc(cli: ^CLI, out: ^os.File) {
 	s := get_style(cli)
-	fmt.wprintf(
+	fmt.fprintfln(
 		out,
-		"%s%s v%s%s\n",
+		"%s%s v%s%s",
 		s.bold,
 		s.bright_cyan,
 		cli.version,
@@ -195,14 +200,13 @@ print_version :: proc(cli: ^CLI, out: io.Writer) {
 // else prints a styled "<name> error:" message plus a usage hint.
 print_error :: proc(cli: ^CLI, err: ^Error) {
 	s := get_style(cli)
-	stderr := os.to_stream(os.stderr)
 
 	#partial switch err.reason {
 	case .Help_Requested:
-		print_help(cli, stderr, err.command)
+		print_help(cli, os.stderr, err.command)
 		return
 	case .Version_Requested:
-		print_version(cli, stderr)
+		print_version(cli, os.stderr)
 		return
 	case:
 		prefix := fmt.tprintf(
@@ -212,15 +216,24 @@ print_error :: proc(cli: ^CLI, err: ^Error) {
 			cli.name,
 			s.reset,
 		)
-		fmt.wprintf(stderr, "%s %s\n", prefix, err.message)
+		fmt.eprintfln("%s %s", prefix, err.message)
 
-		// Show usage hint for errors
+		// Show usage hint for errors, naming the actual command that was run.
+		// In Odin style the flag is -help; in Unix style it's --help.
 		if err.reason != .Help_Requested && err.reason != .Version_Requested {
-			fmt.wprintf(
-				stderr,
-				"\n%sRun '%s --help' for usage.%s\n",
+			cmd_name := cli.name
+			if err.command != nil {
+				cmd_name = err.command.name
+			}
+			flag := "--help"
+			if cli.style == .Odin {
+				flag = "-help"
+			}
+			fmt.eprintfln(
+				"\n%sRun '%s %s' for usage.%s",
 				s.dim,
-				cli.name,
+				cmd_name,
+				flag,
 				s.reset,
 			)
 		}
@@ -358,6 +371,10 @@ write_options :: proc(
 		strings.write_string(builder, "  ")
 		write_option_line(builder, s, style, opt, max_width)
 		strings.write_byte(builder, '\n')
+
+		if len(opt.notes) > 0 {
+			write_notes(builder, s, opt.notes, "      ")
+		}
 	}
 }
 
@@ -461,6 +478,25 @@ write_option_line :: proc(
 	}
 }
 
+// write_notes writes each note in `notes` on its own indented line, styled
+// like a dim-context hint ("note: ..."). Used for command/option/argument
+// notes appended via cmd_note/option_note/opt_note.
+write_notes :: proc(
+	builder: ^strings.Builder,
+	s: style_set,
+	notes: [dynamic]string,
+	indent: string,
+) {
+	for note in notes {
+		strings.write_string(builder, indent)
+		strings.write_string(builder, s.dim)
+		strings.write_string(builder, "note: ")
+		strings.write_string(builder, s.reset)
+		strings.write_string(builder, note)
+		strings.write_byte(builder, '\n')
+	}
+}
+
 // write_arguments writes the "Arguments:" section for a command.
 write_arguments :: proc(
 	builder: ^strings.Builder,
@@ -500,6 +536,10 @@ write_arguments :: proc(
 			strings.write_string(builder, s.reset)
 		}
 		strings.write_byte(builder, '\n')
+
+		if len(arg.notes) > 0 {
+			write_notes(builder, s, arg.notes, "      ")
+		}
 	}
 }
 
@@ -621,47 +661,54 @@ write_wrapped :: proc(
 // Convenience functions for handlers
 // ============================================================================
 
-// println writes msg plus a newline to out.
-println :: proc(out: io.Writer, msg: string) {
-	fmt.wprintln(out, msg)
-}
-
-// printf writes a formatted message (no trailing newline) to out.
-printf :: proc(out: io.Writer, format: string, args: ..any) {
-	fmt.wprintf(out, format, ..args)
-}
-
-// eprintln writes msg plus a newline to stderr.
-eprintln :: proc(msg: string) {
-	fmt.wprintln(os.to_stream(os.stderr), msg)
-}
-
-// eprintf writes a formatted message to stderr.
-eprintf :: proc(format: string, args: ..any) {
-	fmt.wprintf(os.to_stream(os.stderr), format, ..args)
-}
-
 // Colored output helpers for handlers
 // success writes msg to out in bold green.
-success :: proc(out: io.Writer, msg: string) {
+success :: proc(msg: string) {
 	s := make_style(true)
-	fmt.wprintf(out, "%s%s%s%s\n", s.bold, s.green, msg, s.reset)
+	fmt.printfln("%s%s%s%s", s.bold, s.green, msg, s.reset)
 }
 
 // warning_msg writes msg to out in bold yellow.
-warning_msg :: proc(out: io.Writer, msg: string) {
+warning_msg :: proc(out: ^os.File, msg: string) {
 	s := make_style(true)
-	fmt.wprintf(out, "%s%s%s%s\n", s.bold, s.yellow, msg, s.reset)
+	fmt.fprintfln(out, "%s%s%s%s", s.bold, s.yellow, msg, s.reset)
 }
 
 // info_msg writes msg to out in bold blue.
-info_msg :: proc(out: io.Writer, msg: string) {
+info_msg :: proc(out: ^os.File, msg: string) {
 	s := make_style(true)
-	fmt.wprintf(out, "%s%s%s%s\n", s.bold, s.blue, msg, s.reset)
+	fmt.fprintfln(out, "%s%s%s%s", s.bold, s.blue, msg, s.reset)
 }
 
 // error_output writes msg to out in bold red.
-error_output :: proc(out: io.Writer, msg: string) {
+error_output :: proc(msg: string) {
 	s := make_style(true)
-	fmt.wprintf(out, "%s%s%s%s\n", s.bold, s.red, msg, s.reset)
+	fmt.eprintfln("%s%s%s%s", s.bold, s.red, msg, s.reset)
+}
+
+// command_error prints "<prefix> error: <msg>" to out in bold red, the
+// standard format for command-level errors. Use prefix like "mimir" (app
+// errors) or "mimir install" (command errors).
+command_error :: proc(prefix: string, msg: string) {
+	s := make_style(true)
+	fmt.eprintfln(
+		"%s%s%s error:%s %s",
+		s.bold,
+		s.bright_red,
+		prefix,
+		s.reset,
+		msg,
+	)
+}
+
+// error_hint prints the "Run '<cmd> -help' for usage." line (Odin style).
+error_hint :: proc(cmd: string) {
+	s := make_style(true)
+	fmt.eprintfln("\n%sRun '%s -help' for usage.%s", s.dim, cmd, s.reset)
+}
+
+// error_hint_unix prints the "Run '<cmd> --help' for usage." line (Unix style).
+error_hint_unix :: proc(cmd: string) {
+	s := make_style(true)
+	fmt.eprintfln("\n%sRun '%s --help' for usage.%s", s.dim, cmd, s.reset)
 }

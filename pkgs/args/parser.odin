@@ -22,7 +22,6 @@ import "core:fmt"
 import "core:os"
 import "core:path/filepath"
 import "core:strings"
-import "pkgs:cli"
 import "pkgs:reflags"
 import "pkgs:state"
 import "pkgs:util"
@@ -31,15 +30,14 @@ VERSION :: "0.12.5"
 
 // build_cli constructs the reflags description of Mimir's command line.
 build_cli :: proc() -> reflags.CLI {
-	root := reflags.command("mimir", "Odin's little toolchain")
+	root := reflags.command("mimir", nil)
 	root.long_desc = "Odin's little toolchain"
 
 	build_cmd := reflags.command(
 		"build",
 		"Compile the current project into bin/",
 	)
-	build_cmd.aliases = make([]string, 1)
-	build_cmd.aliases[0] = "b"
+	build_cmd.alias = "b"
 	append(
 		&build_cmd.options,
 		reflags.opt_flag(
@@ -54,8 +52,11 @@ build_cli :: proc() -> reflags.CLI {
 	)
 
 	run_cmd := reflags.command("run", "Build if needed, then run the project")
-	run_cmd.aliases = make([]string, 1)
-	run_cmd.aliases[0] = "r"
+	run_cmd.alias = "r"
+	append(
+		&run_cmd.notes,
+		"Use '--' to pass arguments through to your project, e.g. mimir run -- arg1",
+	)
 	append(
 		&run_cmd.options,
 		reflags.opt_flag(
@@ -78,9 +79,15 @@ build_cli :: proc() -> reflags.CLI {
 
 	new_cmd := reflags.command("new", "Scaffold a fresh Odin project")
 	append(
-		&new_cmd.arguments,
-		reflags.arg_string("name", "Name of the new project"),
+		&new_cmd.notes,
+		"Project names with spaces are converted to kebab-case",
 	)
+	new_name_builder := reflags.argument("name", "Name of the new project")
+	reflags.arg_note(
+		&new_name_builder,
+		"Avoid path separators and reserved characters (\\/:*?\"<>|)",
+	)
+	append(&new_cmd.arguments, reflags.arg_build(new_name_builder))
 	append(
 		&new_cmd.options,
 		reflags.opt_flag("no-git", "", "Do not initialize a git repository"),
@@ -90,11 +97,14 @@ build_cli :: proc() -> reflags.CLI {
 		"install",
 		"Build a binary - the current project or a remote one - and install it on your system",
 	)
+	append(
+		&install_cmd.notes,
+		"Pass '.' to install the current project; otherwise give a site/owner/repo URL",
+	)
 	install_repo_builder := reflags.argument(
 		"repo",
-		"Repository to install from (e.g. site/owner/repo); omit to install the current project",
+		"Repository to install from (e.g. site/owner/repo)",
 	)
-	reflags.arg_optional(&install_repo_builder)
 	append(&install_cmd.arguments, reflags.arg_build(install_repo_builder))
 
 	uninstall_cmd := reflags.command(
@@ -149,12 +159,7 @@ build_cli :: proc() -> reflags.CLI {
 	root_cmd := new(reflags.Command)
 	root_cmd^ = root
 
-	return reflags.make_cli(
-		"mimir",
-		VERSION,
-		"Odin's little toolchain",
-		root_cmd,
-	)
+	return reflags.make_cli("mimir", VERSION, root_cmd)
 }
 
 // parse parses os.args into app_state and returns the invoked command.
@@ -175,19 +180,24 @@ parse :: proc(app_state: ^state.State) -> state.Command {
 
 	if parsed.command.name == "mimir" {
 		// No subcommand given.
-		reflags.print_help(&app_cli, os.to_stream(os.stdout))
+		reflags.print_help(&app_cli, os.stdout)
 		os.exit(1)
 	}
 
 	cmd := command_from_name(parsed.command.name)
 
 	if cmd == .Help {
-		reflags.print_help(&app_cli, os.to_stream(os.stdout))
+		reflags.print_help(&app_cli, os.stdout)
 		os.exit(0)
 	}
 
 	if is_project_command(cmd) && !util.is_odin_project() {
-		cli.print_no_proj()
+		cmd_name := parsed.command.name
+		reflags.command_error(
+			fmt.tprintf("mimir %s", cmd_name),
+			"Current directory does not contain a valid Odin project for Mimir to work with.",
+		)
+		reflags.error_hint(cmd_name)
 		os.exit(1)
 	}
 

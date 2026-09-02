@@ -7,6 +7,7 @@ import "core:sys/posix"
 import "core:sys/windows"
 import "core:terminal/ansi"
 import "pkgs:cli"
+import "pkgs:reflags"
 import "pkgs:state"
 
 handle_run :: proc(app_state: ^state.State) {
@@ -14,12 +15,9 @@ handle_run :: proc(app_state: ^state.State) {
 
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
+		reflags.command_error(
+			"mimir run",
 			"Failed to determine project directory",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
 		)
 		os.exit(1)
 	}
@@ -97,13 +95,9 @@ handle_run :: proc(app_state: ^state.State) {
 
 	run_process, exec_err := os.process_start(run_command)
 	if exec_err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.BOLD),
-			cli.color_ansi(ansi.FG_BRIGHT_RED),
-			"Failed to run project ",
-			cli.color_ansi(ansi.RESET),
-			exec_err,
-			sep = "",
+		reflags.command_error(
+			"mimir run",
+			fmt.tprintf("Failed to run project: %v", exec_err),
 		)
 		os.exit(1)
 	}

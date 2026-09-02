@@ -46,7 +46,7 @@ get_collections :: proc(cwd: string) -> [dynamic]string {
 		os.exit(1)
 	}
 
-	collections := make([dynamic]string)
+	collections := make([dynamic]string, 0, 8, context.temp_allocator)
 
 	for col in config.collections {
 		current := fmt.tprintf("-collection:%s=%s", col.name, col.path)
@@ -101,7 +101,6 @@ start_build :: proc(
 	)
 
 	collections := get_collections(cwd)
-	defer util.delete_dynamic_strings(collections)
 
 	first_time := !os.exists(bin_path)
 

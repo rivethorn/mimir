@@ -9,7 +9,13 @@ import "pkgs:state"
 import "pkgs:util"
 
 handle_install :: proc(app_state: ^state.State) {
-	if len(os.args) < 3 && !util.is_odin_project() {
+	if len(os.args) < 3 {
+		cli.print_install_arg_err()
+		cli.print_install_usage(os.stderr)
+		os.exit(1)
+	}
+
+	if app_state.config.url == "." && !util.is_odin_project() {
 		cli.print_no_proj()
 		cli.print_install_usage(os.stderr)
 		os.exit(1)
@@ -21,7 +27,7 @@ handle_install :: proc(app_state: ^state.State) {
 
 	name: string
 
-	if len(os.args) < 3  /* local project */{
+	if app_state.config.url == "."  /* local project */{
 		project_dir, err := os.get_working_directory(context.allocator)
 		if err != nil {
 			fmt.eprintln(

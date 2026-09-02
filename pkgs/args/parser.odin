@@ -1,226 +1,291 @@
+/*
+package args - Mimir's command-line interface.
+
+Defines Mimir's commands and options with reflags, parses `os.args` into a
+`state.State`, and returns the invoked command as a `state.Command` enum
+for type-safe dispatch in main.
+
+Parsing uses reflags' Odin style (like core:flags): options are introduced
+with a single dash (`-release`, `-r`), value options take an attached value
+(`-name:foo` or `-name=foo`), and underscores in flag names are treated as
+dashes (`-no_git` matches `no-git`). A `--` ends option parsing; everything
+after it is positional (used by `run` to pass arguments to the project).
+
+Help requests (`-h`/`-help`/`--help`), version requests, usage errors, and
+the "not an Odin project" guard are all handled here (printing and exiting),
+so main.odin only switches on the returned command and calls handlers.
+*/
+
 package args
 
+import "core:fmt"
 import "core:os"
+import "core:path/filepath"
 import "core:strings"
 import "pkgs:cli"
+import "pkgs:reflags"
 import "pkgs:state"
+import "pkgs:util"
 
+VERSION :: "0.12.5"
 
-set_main_command :: proc(app_state: ^state.State) {
-	for opt in cli.Main_Commands {
-		if os.args[1] == opt.name || os.args[1] == opt.short {
-			app_state.command = opt.command
+// build_cli constructs the reflags description of Mimir's command line.
+build_cli :: proc() -> reflags.CLI {
+	root := reflags.command("mimir", "Odin's little toolchain")
+	root.long_desc = "Odin's little toolchain"
+
+	build_cmd := reflags.command(
+		"build",
+		"Compile the current project into bin/",
+	)
+	build_cmd.aliases = make([]string, 1)
+	build_cmd.aliases[0] = "b"
+	append(
+		&build_cmd.options,
+		reflags.opt_flag(
+			"release",
+			"r",
+			"Compile the project in release mode",
+		),
+	)
+	append(
+		&build_cmd.options,
+		reflags.opt_flag("silent", "s", "Silent the terminal output"),
+	)
+
+	run_cmd := reflags.command("run", "Build if needed, then run the project")
+	run_cmd.aliases = make([]string, 1)
+	run_cmd.aliases[0] = "r"
+	append(
+		&run_cmd.options,
+		reflags.opt_flag(
+			"release",
+			"r",
+			"Compile and run the project in release mode",
+		),
+	)
+	append(
+		&run_cmd.options,
+		reflags.opt_flag("silent", "s", "Silent the terminal output"),
+	)
+	run_args_builder := reflags.argument(
+		"args",
+		"Arguments passed through to the project",
+	)
+	reflags.arg_optional(&run_args_builder)
+	reflags.arg_variadic(&run_args_builder)
+	append(&run_cmd.arguments, reflags.arg_build(run_args_builder))
+
+	new_cmd := reflags.command("new", "Scaffold a fresh Odin project")
+	append(
+		&new_cmd.arguments,
+		reflags.arg_string("name", "Name of the new project"),
+	)
+	append(
+		&new_cmd.options,
+		reflags.opt_flag("no-git", "", "Do not initialize a git repository"),
+	)
+
+	install_cmd := reflags.command(
+		"install",
+		"Build a binary - the current project or a remote one - and install it on your system",
+	)
+	install_repo_builder := reflags.argument(
+		"repo",
+		"Repository to install from (e.g. site/owner/repo); omit to install the current project",
+	)
+	reflags.arg_optional(&install_repo_builder)
+	append(&install_cmd.arguments, reflags.arg_build(install_repo_builder))
+
+	uninstall_cmd := reflags.command(
+		"uninstall",
+		"Remove an installed binary from your system",
+	)
+	append(
+		&uninstall_cmd.arguments,
+		reflags.arg_string("pkg", "Package to uninstall"),
+	)
+	append(
+		&uninstall_cmd.options,
+		reflags.opt_flag(
+			"dry-run",
+			"d",
+			"See what would happen without changing anything",
+		),
+	)
+
+	clean_cmd := reflags.command("clean", "Nuke bin/ and all build artifacts")
+	append(
+		&clean_cmd.options,
+		reflags.opt_flag(
+			"dry-run",
+			"d",
+			"See what would happen without changing anything",
+		),
+	)
+
+	version_cmd := reflags.command(
+		"version",
+		"Tell you what version you're running",
+	)
+	help_cmd := reflags.command("help", "Show help message")
+
+	subs := []reflags.Command {
+		build_cmd,
+		run_cmd,
+		new_cmd,
+		install_cmd,
+		uninstall_cmd,
+		clean_cmd,
+		version_cmd,
+		help_cmd,
+	}
+	for sub in subs {
+		append(&root.subcommands, sub)
+	}
+
+	// The CLI outlives this procedure, so the root command must live on the
+	// heap; make_cli stores a pointer to it.
+	root_cmd := new(reflags.Command)
+	root_cmd^ = root
+
+	return reflags.make_cli(
+		"mimir",
+		VERSION,
+		"Odin's little toolchain",
+		root_cmd,
+	)
+}
+
+// parse parses os.args into app_state and returns the invoked command.
+// Exits the process on usage errors, help/version requests, and when a
+// project command is used outside of an Odin project.
+parse :: proc(app_state: ^state.State) -> state.Command {
+	app_cli := build_cli()
+	app_cli.style = .Odin
+
+	parsed, parse_err := reflags.parse(&app_cli, os.args[1:])
+	defer reflags.destroy(parsed)
+	if parse_err != nil {
+		reflags.print_error(&app_cli, parse_err)
+		os.exit(
+			parse_err.reason == .Help_Requested || parse_err.reason == .Version_Requested ? 0 : 1,
+		)
+	}
+
+	if parsed.command.name == "mimir" {
+		// No subcommand given.
+		reflags.print_help(&app_cli, os.to_stream(os.stdout))
+		os.exit(1)
+	}
+
+	cmd := command_from_name(parsed.command.name)
+
+	if cmd == .Help {
+		reflags.print_help(&app_cli, os.to_stream(os.stdout))
+		os.exit(0)
+	}
+
+	if is_project_command(cmd) && !util.is_odin_project() {
+		cli.print_no_proj()
+		os.exit(1)
+	}
+
+	fill_config(app_state, parsed, cmd, &app_cli)
+
+	return cmd
+}
+
+// command_from_name maps a matched reflags command name to its enum value.
+command_from_name :: proc(name: string) -> state.Command {
+	switch name {
+	case "build":
+		return .Build
+	case "run":
+		return .Run
+	case "new":
+		return .New
+	case "install":
+		return .Install
+	case "uninstall":
+		return .Uninstall
+	case "clean":
+		return .Clean
+	case "version":
+		return .Version
+	case "help":
+		return .Help
+	}
+	return .Error
+}
+
+// is_project_command reports whether a command operates on an Odin project
+// and therefore requires one to be present.
+is_project_command :: proc(cmd: state.Command) -> bool {
+	#partial switch cmd {
+	case .Build, .Run, .Clean:
+		return true
+	}
+	return false
+}
+
+// fill_config maps the parsed values of `cmd` onto app_state.config.
+fill_config :: proc(
+	app_state: ^state.State,
+	parsed: reflags.Parsed_Args,
+	cmd: state.Command,
+	app_cli: ^reflags.CLI,
+) {
+	#partial switch cmd {
+	case .Build:
+		app_state.config.release = reflags.get_bool(parsed, "release")
+		app_state.config.silent = reflags.get_bool(parsed, "silent")
+	case .Run:
+		app_state.config.release = reflags.get_bool(parsed, "release")
+		app_state.config.silent = reflags.get_bool(parsed, "silent")
+		app_state.config.run_args = reflags.get_strings(parsed, "args")
+	case .New:
+		app_state.config.name = reflags.get_string(parsed, "name")
+		app_state.config.no_git = reflags.get_bool(parsed, "no-git")
+	case .Uninstall:
+		app_state.config.name = reflags.get_string(parsed, "pkg")
+		app_state.config.dry_run = reflags.get_bool(parsed, "dry-run")
+	case .Install:
+		app_state.config.url = reflags.get_string(parsed, "repo")
+		if app_state.config.url != "" {
+			app_state.config.name = pkg_name_from_url(app_state.config.url)
+			validate_url(app_cli, app_state.config.url)
 		}
+	case .Clean:
+		app_state.config.dry_run = reflags.get_bool(parsed, "dry-run")
+	case:
 	}
 }
 
-set_config :: proc(app_state: ^state.State) {
-	#partial switch app_state.command {
-	case .Build:
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_build_usage()
-				os.exit(0)
-			case "--release", "-r":
-				app_state.config.release = true
-			case "--silent", "-s":
-				app_state.config.silent = true
-			case:
-				cli.print_build_unexpected_arg(os.args[i])
-				os.exit(1)
-			}
-		}
-	case .Run:
-		outer_for: for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_run_usage()
-				os.exit(0)
-			case "--release", "-r":
-				app_state.config.release = true
-			case "--silent", "-s":
-				app_state.config.silent = true
-			case "--":
-				if len(os.args) > 3 {
-					app_state.config.run_args = os.args[i + 1:len(os.args)]
-				}
-				break outer_for
-			case:
-				if strings.starts_with(os.args[i], "--") {
-					cli.print_run_unexpected_arg(os.args[i], true)
-					os.exit(1)
-				}
-				if strings.starts_with(os.args[i], "-") {
-					cli.print_run_unexpected_arg(os.args[i], false)
-					os.exit(1)
-				}
-				app_state.config.run_args = os.args[i:len(os.args)]
-			}
-		}
-	case .New:
-		if len(os.args) < 3 {
-			cli.print_new_arg_err()
-			os.exit(1)
-		}
+// pkg_name_from_url derives a package name from a repo URL like
+// "github.com/owner/repo" -> "repo".
+pkg_name_from_url :: proc(url: string) -> string {
+	return filepath.base(url)
+}
 
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--no-git":
-				app_state.config.no_git = true
-			case "--help", "-h":
-				cli.print_new_usage()
-				os.exit(0)
-			}
-		}
-
-		if len(os.args) > 3 {
-			cli.print_new_name_help()
-			os.exit(1)
-		}
-	case .Add:
-		if len(os.args) < 3 {
-			cli.print_add_arg_err()
-			os.exit(1)
-		}
-
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_add_usage()
-				os.exit(0)
-			case "--name":
-				if len(os.args) == i + 2 {
-					app_state.config.name = os.args[i + 1]
-				} else {
-					cli.print_add_name_err()
-					os.exit(1)
-				}
-			case:
-				if os.args[i - 1] == "--name" {
-					return
-				}
-				arr, _ := strings.split(
-					os.args[i],
-					"/",
-					context.temp_allocator,
-				)
-				if !strings.contains_rune(os.args[i], '/') ||
-				   arr[len(arr) - 1] == ".git" ||
-				   strings.contains_rune(os.args[i], '@') {
-					cli.print_add_url_err()
-					os.exit(1)
-				}
-				app_state.config.name = arr[len(arr) - 1]
-				app_state.config.url = os.args[i]
-			}
-		}
-	case .Remove:
-		if len(os.args) < 3 {
-			cli.print_remove_arg_err()
-			os.exit(1)
-		}
-
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_remove_usage()
-				os.exit(0)
-			case "--dry-run", "-d":
-				app_state.config.dry_run = true
-			case:
-				app_state.config.name = os.args[i]
-			}
-		}
-
-		if app_state.config.name == "" {
-			cli.print_remove_arg_err()
-			os.exit(1)
-		}
-	case .Update:
-		if len(os.args) < 3 {
-			cli.print_update_arg_err()
-			os.exit(1)
-		}
-
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_update_usage()
-				os.exit(0)
-			case "--dry-run", "-d":
-				app_state.config.dry_run = true
-			case:
-				app_state.config.name = os.args[i]
-			}
-		}
-	case .List:
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_list_usage()
-				os.exit(0)
-			case:
-				cli.print_list_usage(os.stderr)
-				os.exit(1)
-			}
-		}
-	case .Install:
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_install_usage()
-				os.exit(0)
-			case:
-				arr, _ := strings.split(
-					os.args[i],
-					"/",
-					context.temp_allocator,
-				)
-				if !strings.contains_rune(os.args[i], '/') ||
-				   arr[len(arr) - 1] == ".git" ||
-				   strings.contains_rune(os.args[i], '@') {
-					cli.print_install_url_err()
-					os.exit(1)
-				}
-				app_state.config.name = arr[len(arr) - 1]
-				app_state.config.url = os.args[i]
-			}
-		}
-	case .Uninstall:
-		if len(os.args) < 3 {
-			cli.print_uninstall_arg_err()
-			os.exit(1)
-		}
-
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_uninstall_usage()
-				os.exit(0)
-			case "--dry-run", "-d":
-				app_state.config.dry_run = true
-			case:
-				app_state.config.name = os.args[i]
-			}
-		}
-
-		if app_state.config.name == "" {
-			cli.print_uninstall_arg_err()
-			os.exit(1)
-		}
-	case .Clean:
-		for i := 2; i < len(os.args); i += 1 {
-			switch os.args[i] {
-			case "--help", "-h":
-				cli.print_clean_usage()
-				os.exit(0)
-			case "--dry-run", "-d":
-				app_state.config.dry_run = true
-			case:
-				cli.print_clean_unexpected_arg(os.args[i])
-				os.exit(1)
-			}
-		}
+// validate_url enforces the old "site/owner/repo" URL rules: it must contain
+// a '/', must not end in ".git", and must not contain '@'.
+validate_url :: proc(app_cli: ^reflags.CLI, url: string) {
+	arr, _ := strings.split(url, "/", context.temp_allocator)
+	if url == "." {
+		return
+	}
+	if !strings.contains_rune(url, '/') ||
+	   arr[len(arr) - 1] == ".git" ||
+	   strings.contains_rune(url, '@') {
+		err := reflags.make_error(
+			.Invalid_Value,
+			fmt.tprintf(
+				"Invalid repository URL: %s (expected site/owner/repo)",
+				url,
+			),
+		)
+		reflags.print_error(app_cli, err)
+		os.exit(1)
 	}
 }

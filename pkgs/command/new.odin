@@ -8,7 +8,7 @@ import "pkgs:cli"
 import "pkgs:state"
 
 handle_new :: proc(app_state: ^state.State) {
-	project_name := os.args[2]
+	project_name := app_state.config.name
 
 	if strings.contains_any(project_name, `\/:*?"<>|`) ||
 	   strings.starts_with(project_name, "-") ||

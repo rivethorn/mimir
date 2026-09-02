@@ -1,63 +1,38 @@
 /*
  Mimir - Odin's toolchain
+
+ The command line is defined and parsed in pkgs:args (with reflags); this
+ file only switches on the parsed state.Command and dispatches to the
+ handlers in pkgs:command.
 */
 
 package main
 
-import "base:runtime"
 import "core:fmt"
-import "core:mem"
-import "core:os"
 import "pkgs:args"
-import "pkgs:cli"
 import "pkgs:command"
 import "pkgs:state"
-import "pkgs:util"
-
-VERSION :: "0.12.5"
 
 main :: proc() {
-	arena: mem.Dynamic_Arena
-	mem.dynamic_arena_init(&arena)
-	context.allocator = mem.dynamic_arena_allocator(&arena)
-	defer mem.dynamic_arena_destroy(&arena)
+	app_state: state.State
+	cmd := args.parse(&app_state)
 
-	if len(os.args) < 2 {
-		cli.print_general_usage(os.stderr)
-		os.exit(1)
-	}
-
-	state: state.State
-
-	args.set_main_command(&state)
-
-	if !util.is_general_command(state.command) && !util.is_odin_project() {
-		cli.print_no_proj()
-		os.exit(1)
-	}
-
-	args.set_config(&state)
-
-	switch state.command {
+	#partial switch cmd {
 	case .Build:
-		command.handle_build(&state)
+		command.handle_build(&app_state)
 	case .Run:
-		command.handle_run(&state)
+		command.handle_run(&app_state)
 	case .New:
 		command.handle_new(&app_state)
 	case .Install:
-		command.handle_install(&state)
+		command.handle_install(&app_state)
 	case .Uninstall:
-		command.handle_uninstall(&state)
+		command.handle_uninstall(&app_state)
 	case .Clean:
-		command.handle_clean(&state)
+		command.handle_clean(&app_state)
 	case .Version:
-		fmt.println("Mimir version", VERSION)
-	case .Help:
-		cli.print_general_usage()
-	case .Error:
-		cli.unknown_command()
-		cli.print_general_usage(os.stderr)
-		os.exit(1)
+		fmt.println("Mimir version", args.VERSION)
+	case:
+		// .Help and .Error are handled (and exit) inside args.parse.
 	}
 }

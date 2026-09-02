@@ -423,6 +423,16 @@ print_install_url_err :: proc() {
 	)
 }
 
+print_install_arg_err :: proc() {
+	fmt.fprintfln(
+		os.stderr,
+		"%s%sExpected package URL%s\n",
+		color_ansi(an.BOLD),
+		color_ansi(an.FG_BRIGHT_RED),
+		color_ansi(an.RESET),
+	)
+}
+
 print_install_usage :: proc(output := os.stdout) {
 	fmt.fprintfln(
 		output,
@@ -438,7 +448,7 @@ print_install_usage :: proc(output := os.stdout) {
 	fmt.fprintln(output, "Installs an Odin binary\n")
 	fmt.fprintfln(
 		output,
-		"%s%snote:%s to install a local project, simply run '%smimir install%s' with no arguments in the project directory\n",
+		"%s%snote:%s to install a local project, simply run '%smimir install .%s' in the project directory\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_BRIGHT_CYAN),
 		color_ansi(an.RESET),
@@ -655,7 +665,7 @@ unknown_command :: proc() {
 print_no_proj :: proc() {
 	fmt.fprintfln(
 		os.stderr,
-		"%s%sError%s: Current directory does not contain a valid Odin project for Mimir to work with.",
+		"%s%sError%s: Current directory does not contain a valid Odin project for Mimir to work with.\n",
 		color_ansi(an.BOLD),
 		color_ansi(an.FG_RED),
 		color_ansi(an.RESET),

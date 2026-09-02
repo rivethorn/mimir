@@ -44,15 +44,7 @@ main :: proc() {
 	case .Run:
 		command.handle_run(&state)
 	case .New:
-		command.handle_new(&state)
-	case .Add:
-		command.handle_add(&state)
-	case .Remove:
-		command.handle_remove(&state)
-	case .Update:
-		command.handle_update(&state)
-	case .List:
-		command.handle_list()
+		command.handle_new(&app_state)
 	case .Install:
 		command.handle_install(&state)
 	case .Uninstall:

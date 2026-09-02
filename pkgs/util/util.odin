@@ -161,7 +161,7 @@ is_general_command :: proc(command: state.Command) -> bool {
 	switch command {
 	case .New, .Install, .Uninstall, .Version, .Help, .Error:
 		return true
-	case .Build, .Run, .Clean, .Add, .Remove, .Update, .List:
+	case .Build, .Run, .Clean:
 		return false
 	case:
 		return false

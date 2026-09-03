@@ -8,9 +8,11 @@ VERSION :: "0.13.1"
 // build_cli constructs the reflags description of Mimir's command line.
 // Each command has its handler attached so reflags can dispatch after parsing.
 build_cli :: proc() -> reflags.CLI {
+	// the 'root' command
 	root := reflags.command("mimir", nil)
 	root.long_desc = "Odin's little toolchain"
 
+	// 'build' command with 'release' and 'silent' flags
 	build_cmd := reflags.command(
 		"build",
 		"Compile the current project into bin/",
@@ -30,6 +32,7 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	build_cmd.handler = command.handle_build
 
+	// 'run' command with 'release' and 'silent' flags, note, and 'args' passing into the app
 	run_cmd := reflags.command("run", "Build if needed, then run the project")
 	run_cmd.alias = "r"
 	append(
@@ -57,6 +60,7 @@ build_cli :: proc() -> reflags.CLI {
 	append(&run_cmd.arguments, reflags.arg_build(run_args_builder))
 	run_cmd.handler = command.handle_run
 
+	// 'new' command with 'name' argument and 'not-git' flag
 	new_cmd := reflags.command("new", "Scaffold a fresh Odin project")
 	append(
 		&new_cmd.notes,
@@ -74,6 +78,7 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	new_cmd.handler = command.handle_new
 
+	// 'install' command with note and 'repo' argument
 	install_cmd := reflags.command(
 		"install",
 		"Build a binary - the current project or a remote one - and install it on your system",
@@ -89,6 +94,7 @@ build_cli :: proc() -> reflags.CLI {
 	append(&install_cmd.arguments, reflags.arg_build(install_repo_builder))
 	install_cmd.handler = command.handle_install
 
+	// 'uninstall' command with 'pkg' argument and 'dry-run' flag
 	uninstall_cmd := reflags.command(
 		"uninstall",
 		"Remove an installed binary from your system",
@@ -105,9 +111,11 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	uninstall_cmd.handler = command.handle_uninstall
 
+	// 'list' command
 	list_cmd := reflags.command("list", "List the apps installed by Mimir")
 	list_cmd.handler = command.handle_list
 
+	// 'clean' command with 'dry-run' flag
 	clean_cmd := reflags.command("clean", "Nuke bin/ and all build artifacts")
 	append(
 		&clean_cmd.options,
@@ -119,9 +127,11 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	clean_cmd.handler = command.handle_clean
 
+	// 'version' and 'help' commands
 	version_cmd := reflags.command("version", "Print mimir version")
 	help_cmd := reflags.command("help", "Print this help")
 
+	// Add all commands to the 'root' commands
 	cmds := []reflags.Command {
 		build_cmd,
 		run_cmd,

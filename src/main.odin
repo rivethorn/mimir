@@ -1,38 +1,21 @@
 /*
- Mimir - Odin's toolchain
+Mimir - Odin's toolchain
 
- The command line is defined and parsed in pkgs:args (with reflags); this
- file only switches on the parsed state.Command and dispatches to the
- handlers in pkgs:command.
+The command line is defined and parsed in pkgs:args (with reflags). Each
+command has its handler attached via reflags' Command_Handler system, so
+main just invokes `args.parse` which dispatches to the correct handler.
 */
 
 package main
 
-import "core:fmt"
-import "pkgs:args"
-import "pkgs:command"
-import "pkgs:state"
+import "core:mem"
+import "pkgs:app"
 
 main :: proc() {
-	app_state: state.State
-	cmd := args.parse(&app_state)
+	arena: mem.Dynamic_Arena
+	mem.dynamic_arena_init(&arena)
+	context.allocator = mem.dynamic_arena_allocator(&arena)
+	defer mem.dynamic_arena_destroy(&arena)
 
-	#partial switch cmd {
-	case .Build:
-		command.handle_build(&app_state)
-	case .Run:
-		command.handle_run(&app_state)
-	case .New:
-		command.handle_new(&app_state)
-	case .Install:
-		command.handle_install(&app_state)
-	case .Uninstall:
-		command.handle_uninstall(&app_state)
-	case .Clean:
-		command.handle_clean(&app_state)
-	case .Version:
-		fmt.println("Mimir version", args.VERSION)
-	case:
-		// .Help and .Error are handled (and exit) inside args.parse.
-	}
+	app.parse_and_run()
 }

@@ -198,7 +198,7 @@ print_version :: proc(cli: ^CLI, out: ^os.File) {
 // print_error prints err to stderr. Help_Requested reasons print the help
 // page and Version_Requested reasons print the version instead; anything
 // else prints a styled "<name> error:" message plus a usage hint.
-print_error :: proc(cli: ^CLI, err: ^Error) {
+print_error :: proc(cli: ^CLI, err: ^Re_Error) {
 	s := get_style(cli)
 
 	#partial switch err.reason {

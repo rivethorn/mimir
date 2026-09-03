@@ -30,7 +30,7 @@ enum_type :: proc(values: []string) -> Arg_Type_Info {
 // custom_type creates a Custom Arg_Type_Info that delegates parsing to the
 // supplied procedure.
 custom_type :: proc(
-	parse_fn: proc(_: string) -> (any, ^Error),
+	parse_fn: proc(_: string) -> (any, ^Re_Error),
 ) -> Arg_Type_Info {
 	return Arg_Type_Info{.Custom, nil, parse_fn}
 }
@@ -190,7 +190,7 @@ opt_enum :: proc(
 // (short may be "").
 opt_custom :: proc(
 	name, short, description: string,
-	parse_fn: proc(_: string) -> (any, ^Error),
+	parse_fn: proc(_: string) -> (any, ^Re_Error),
 ) -> Option {
 	b := option(name, description)
 	opt_type(&b, custom_type(parse_fn))

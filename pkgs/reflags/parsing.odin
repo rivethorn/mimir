@@ -38,7 +38,7 @@ parse :: proc(
 	strict: bool = true,
 ) -> (
 	Parsed_Args,
-	^Error,
+	^Re_Error,
 ) {
 	ctx := Parse_Ctx {
 		cli          = cli,
@@ -104,7 +104,7 @@ parse_or_exit :: proc(cli: ^CLI, args: []string) -> Parsed_Args {
 
 // parse_commands walks the command tree, consuming subcommand names from
 // the front of the args. Stops at the first flag or unmatched positional.
-parse_commands :: proc(ctx: ^Parse_Ctx) -> ^Error {
+parse_commands :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 	for len(ctx.args) > 0 {
 		arg := ctx.args[0]
 
@@ -158,7 +158,7 @@ try_match_subcommand :: proc(ctx: ^Parse_Ctx, name: string) -> bool {
 
 // parse_options_and_args parses long/short options and positional
 // arguments for the current command.
-parse_options_and_args :: proc(ctx: ^Parse_Ctx) -> ^Error {
+parse_options_and_args :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 	if ctx.style == .Odin {
 		return parse_options_and_args_odin(ctx)
 	}
@@ -227,7 +227,7 @@ parse_long_option :: proc(
 	ctx: ^Parse_Ctx,
 	arg: string,
 	options: map[string]^Option,
-) -> ^Error {
+) -> ^Re_Error {
 	name_value := arg[2:] // strip --
 
 	name: string
@@ -305,7 +305,7 @@ parse_short_options :: proc(
 	arg: string,
 	options: map[string]^Option,
 	index_ptr: ^int,
-) -> ^Error {
+) -> ^Re_Error {
 	// Handle bundled short options: -abc, -o value, -o=value
 	shorts := arg[1:] // strip -
 
@@ -423,7 +423,7 @@ parse_positional :: proc(
 	arg: string,
 	cmd: ^Command,
 	arg_index: ^int,
-) -> ^Error {
+) -> ^Re_Error {
 	// Find the argument definition for this position
 	arg_def_index := -1
 	for i in 0 ..< len(cmd.arguments) {
@@ -491,7 +491,7 @@ parse_value :: proc(
 	type_info: Arg_Type_Info,
 ) -> (
 	string,
-	^Error,
+	^Re_Error,
 ) {
 	switch type_info.kind {
 	case .String:
@@ -587,7 +587,7 @@ parse_value :: proc(
 
 // validate_parsed checks that required options/arguments were provided and
 // applies defaults for absent options that have one.
-validate_parsed :: proc(ctx: ^Parse_Ctx) -> ^Error {
+validate_parsed :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 	cmd := ctx.current_cmd
 
 	// Check required options and apply defaults
@@ -660,8 +660,8 @@ make_error :: proc(
 	message: string,
 	cmd: ^Command = nil,
 	opt: string = "",
-) -> ^Error {
-	err := new(Error)
+) -> ^Re_Error {
+	err := new(Re_Error)
 	err.reason = reason
 	err.message = message
 	err.command = cmd
@@ -677,7 +677,7 @@ make_error :: proc(
 // attach a value (value options require an attached value), underscores in
 // flag names are treated as dashes, and everything not starting with `-`
 // (or following `--`) is a positional argument.
-parse_options_and_args_odin :: proc(ctx: ^Parse_Ctx) -> ^Error {
+parse_options_and_args_odin :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 	cmd := ctx.current_cmd
 
 	// Odin style has no short flags; only the long name is recognized.

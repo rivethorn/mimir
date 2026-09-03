@@ -1,5 +1,6 @@
 package reflags
 
+import "core:os"
 import "core:strconv"
 import "core:strings"
 
@@ -53,7 +54,7 @@ Arg_Type :: enum {
 Arg_Type_Info :: struct {
 	kind:         Arg_Type,
 	enum_values:  []string, // For Enum type
-	custom_parse: proc(_: string) -> (any, ^Error), // For Custom type
+	custom_parse: proc(_: string) -> (any, ^Re_Error), // For Custom type
 }
 
 // ============================================================================
@@ -245,11 +246,16 @@ Error_Reason :: enum {
 
 // Error describes a parsing or validation failure (or a help/version
 // request). See make_error for constructing one.
-Error :: struct {
+Re_Error :: struct {
 	reason:  Error_Reason,
 	message: string,
 	command: ^Command, // Command context where error occurred
 	option:  string, // Option name if applicable
+}
+
+Error :: union {
+	Re_Error,
+	os.Error,
 }
 
 // Parsing_Style selects the command-line syntax accepted by parse.

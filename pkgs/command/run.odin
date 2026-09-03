@@ -8,10 +8,13 @@ import "core:sys/windows"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
-import "pkgs:state"
 
-handle_run :: proc(app_state: ^state.State) {
-	rebuild := handle_build(app_state)
+handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
+	release := reflags.get_bool(args, "release")
+	silent := reflags.get_bool(args, "silent")
+	run_args := reflags.get_strings(args, "args")
+
+	rebuild := handle_build_cwd(args, "")
 
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
@@ -32,18 +35,13 @@ handle_run :: proc(app_state: ^state.State) {
 	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
 
 	bin_path, _ := filepath.join(
-		{
-			project_dir,
-			"bin",
-			app_state.config.release ? "release" : "debug",
-			exe_name,
-		},
+		{project_dir, "bin", release ? "release" : "debug", exe_name},
 		context.temp_allocator,
 	)
 
 	command := make([dynamic]string)
 	append(&command, bin_path)
-	append(&command, ..app_state.config.run_args)
+	append(&command, ..run_args)
 
 	run_command := os.Process_Desc {
 		command     = command[:],
@@ -53,8 +51,8 @@ handle_run :: proc(app_state: ^state.State) {
 		stdin       = os.stdin,
 	}
 
-	if !app_state.config.silent {
-		if app_state.config.release {
+	if !silent {
+		if release {
 			fmt.println(
 				cli.color_ansi(ansi.BOLD),
 				cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -104,7 +102,7 @@ handle_run :: proc(app_state: ^state.State) {
 
 	free_all(context.temp_allocator)
 
-	state, _ := os.process_wait(run_process)
+	proc_state, _ := os.process_wait(run_process)
 
-	os.exit(state.exit_code)
+	os.exit(proc_state.exit_code)
 }

@@ -6,11 +6,17 @@ import "core:path/filepath"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
-import "pkgs:state"
 import "pkgs:util"
 
-handle_install :: proc(app_state: ^state.State) {
-	if app_state.config.url == "" {
+@(private = "file")
+pkg_name_from_url :: proc(url: string) -> string {
+	return filepath.base(url)
+}
+
+handle_install :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
+	repo := reflags.get_string(args, "repo")
+
+	if repo == "" {
 		reflags.command_error(
 			"mimir install",
 			"Missing REPO argument — provide a URL, or use '.' to install the current project.",
@@ -19,13 +25,11 @@ handle_install :: proc(app_state: ^state.State) {
 		os.exit(1)
 	}
 
-	app_state.config.release = true
-
 	bin_dir := util.get_mimir_bin_dir_path()
 
 	name: string
 
-	if app_state.config.url == "."  /* local project */{
+	if repo == "."  /* local project */{
 		project_dir, err := os.get_working_directory(context.allocator)
 		if err != nil {
 			reflags.command_error(
@@ -60,10 +64,10 @@ handle_install :: proc(app_state: ^state.State) {
 			{project_dir, "bin", "release", exe_name},
 		)
 
-		handle_build(app_state)
+		handle_build_cwd(args, project_dir)
 
 		if err := os.copy_directory_all(bin_dir, output_bin); err != nil {
-			reflags.command_error("mimir install", "Failed to install binary")
+			reflags.command_error("mimir install", os.error_string(err))
 			os.exit(1)
 		}
 
@@ -75,7 +79,7 @@ handle_install :: proc(app_state: ^state.State) {
 
 		os.make_directory(tmp)
 
-		pkg_name := app_state.config.name
+		pkg_name := pkg_name_from_url(repo)
 
 		project_dir, _ := filepath.join({tmp, pkg_name})
 		pkg_path, _ := filepath.join({bin_dir, pkg_name})
@@ -92,7 +96,7 @@ handle_install :: proc(app_state: ^state.State) {
 			os.exit(1)
 		}
 
-		util.clone_repo(app_state.config.url, pkg_name, tmp)
+		util.clone_repo(repo, pkg_name, tmp)
 
 		project_name := filepath.base(project_dir)
 
@@ -107,7 +111,7 @@ handle_install :: proc(app_state: ^state.State) {
 			{project_dir, "bin", "release", exe_name},
 		)
 
-		handle_build(app_state, project_dir)
+		handle_build_cwd(args, project_dir)
 
 		if err := os.copy_directory_all(bin_dir, output_bin); err != nil {
 			reflags.command_error("mimir install", "Failed to install binary")
@@ -129,4 +133,6 @@ handle_install :: proc(app_state: ^state.State) {
 		"'",
 		sep = "",
 	)
+
+	return nil
 }

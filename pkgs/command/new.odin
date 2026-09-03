@@ -2,14 +2,15 @@ package command
 
 import "core:fmt"
 import "core:os"
+import "core:path/filepath"
 import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
-import "pkgs:state"
 
-handle_new :: proc(app_state: ^state.State) {
-	project_name := app_state.config.name
+handle_new :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
+	project_name := reflags.get_string(args, "name")
+	no_git := reflags.get_bool(args, "no-git")
 
 	if strings.contains_any(project_name, `\/:*?"<>|`) ||
 	   strings.starts_with(project_name, "-") ||
@@ -162,9 +163,19 @@ handle_new :: proc(app_state: ^state.State) {
 		os.exit(1)
 	}
 
-	if !app_state.config.no_git {
-		if _, err := os.process_start({command = {"git", "init"}});
-		   err != nil {
+	if !no_git {
+		cwd, err := os.get_working_directory(context.allocator)
+		if err != nil {
+			reflags.command_error(
+				"mimir new",
+				"Failed to get working directory",
+			)
+			os.exit(1)
+		}
+		proj, _ := filepath.join({cwd, project_dir})
+		if _, err := os.process_start(
+			{command = {"git", "init"}, working_dir = proj},
+		); err != nil {
 			reflags.command_error(
 				"mimir new",
 				fmt.tprintf("Failed to initialize git repo: %v", err),
@@ -187,4 +198,6 @@ handle_new :: proc(app_state: ^state.State) {
 		cli.color_ansi(ansi.RESET),
 		project_name,
 	)
+
+	return nil
 }

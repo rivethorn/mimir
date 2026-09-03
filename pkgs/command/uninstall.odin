@@ -6,11 +6,11 @@ import "core:path/filepath"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
-import "pkgs:state"
 import "pkgs:util"
 
-handle_uninstall :: proc(app_state: ^state.State) {
-	pkg_name := app_state.config.name
+handle_uninstall :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
+	pkg_name := reflags.get_string(args, "pkg")
+	dry_run := reflags.get_bool(args, "dry-run")
 	bin_dir := util.get_mimir_bin_dir_path()
 	pkg_path, _ := filepath.join({bin_dir, pkg_name}, context.temp_allocator)
 
@@ -26,7 +26,7 @@ handle_uninstall :: proc(app_state: ^state.State) {
 		os.exit(1)
 	}
 
-	if app_state.config.dry_run {
+	if dry_run {
 		fmt.printfln(
 			"%s%sWould%s remove '%s%s%s'",
 			cli.color_ansi(ansi.BOLD),
@@ -52,4 +52,5 @@ handle_uninstall :: proc(app_state: ^state.State) {
 	)
 
 	free_all(context.temp_allocator)
+	return nil
 }

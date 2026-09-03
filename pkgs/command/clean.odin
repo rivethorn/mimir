@@ -5,16 +5,16 @@ import "core:os"
 import "core:path/filepath"
 import "core:terminal/ansi"
 import "pkgs:cli"
-import "pkgs:state"
+import "pkgs:reflags"
 
-handle_clean :: proc(app_state: ^state.State) {
+handle_clean :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
+	dry_run := reflags.get_bool(args, "dry-run")
+
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
-		fmt.eprintln(
-			cli.color_ansi(ansi.FG_RED),
-			"Failed to determine project name",
-			cli.color_ansi(ansi.RESET),
-			sep = "",
+		reflags.command_error(
+			"mimir clean",
+			"Failed to determine project directory",
 		)
 		os.exit(1)
 	}
@@ -37,7 +37,7 @@ handle_clean :: proc(app_state: ^state.State) {
 		os.exit(0)
 	}
 
-	if app_state.config.dry_run {
+	if dry_run {
 		if is_dbg {
 			fmt.printfln(
 				"%s%sWould%s remove '%s%s%s' directory",
@@ -78,4 +78,5 @@ handle_clean :: proc(app_state: ^state.State) {
 	)
 
 	free_all(context.temp_allocator)
+	return nil
 }

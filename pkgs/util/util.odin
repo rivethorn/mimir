@@ -8,18 +8,6 @@ import "core:sync"
 import "core:terminal/ansi"
 import "core:thread"
 import "pkgs:cli"
-import "pkgs:state"
-
-delete_strings :: proc(ss: []string) {
-	for s in ss {
-		delete(s)
-	}
-}
-
-delete_dynamic_strings :: proc(ss: [dynamic]string) {
-	delete_strings(ss[:])
-	delete(ss)
-}
 
 command_exists :: proc(command_name: string) -> bool {
 	defer free_all(context.temp_allocator)
@@ -45,7 +33,7 @@ command_exists :: proc(command_name: string) -> bool {
 	for dir in path_list {
 		if dir == "" {continue}
 
-		full_path, err := filepath.join(
+		full_path, _ := filepath.join(
 			[]string{dir, target_file},
 			context.temp_allocator,
 		)
@@ -155,17 +143,6 @@ is_odin_project :: proc() -> bool {
 	}
 
 	return true
-}
-
-is_general_command :: proc(command: state.Command) -> bool {
-	switch command {
-	case .New, .Install, .Uninstall, .Version, .Help, .Error:
-		return true
-	case .Build, .Run, .Clean, .Add, .Remove, .Update, .List:
-		return false
-	case:
-		return false
-	}
 }
 
 clone_repo :: proc(url, pkg_name, tmp_dir: string) {

@@ -74,6 +74,7 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 		{cwd, "bin", config.release ? "release" : "debug"},
 		context.temp_allocator,
 	)
+
 	if err := os.make_directory(bin_dir); err != nil {
 		if !os.exists(bin_dir) {
 			reflags.command_error(
@@ -371,6 +372,11 @@ handle_build_cwd :: proc(
 ) {
 	project_dir := cwd
 
+	release :=
+		args.command.name == "install" ? true : reflags.get_bool(args, "release")
+	silent :=
+		args.command.name == "install" ? false : reflags.get_bool(args, "silent")
+
 	source_dir, _ := filepath.join(
 		{project_dir, "src"},
 		context.temp_allocator,
@@ -385,7 +391,18 @@ handle_build_cwd :: proc(
 
 	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
 
-	output, _ := filepath.join({"bin", "release", exe_name}, context.allocator)
+	output: string
+	if release {
+		output, _ = filepath.join(
+			{"bin", "release", exe_name},
+			context.allocator,
+		)
+	} else {
+		output, _ = filepath.join(
+			{"bin", "debug", exe_name},
+			context.allocator,
+		)
+	}
 
 	if !needs_rebuild(source_dir, output) {
 		fmt.println(
@@ -420,11 +437,11 @@ handle_build_cwd :: proc(
 		name     = project_name,
 		src_path = "src",
 		output   = output,
-		release  = true,
-		silent   = false,
+		release  = release,
+		silent   = silent,
 	}
 
-	build_err := start_build(&config, project_dir)
+	build_err := start_build(&config, cwd)
 	if build_err != nil {
 		reflags.command_error("mimir build", fmt.tprintf("%v", build_err))
 		os.exit(1)

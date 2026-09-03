@@ -14,9 +14,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	silent := reflags.get_bool(args, "silent")
 	run_args := reflags.get_strings(args, "args")
 
-	rebuild := handle_build_cwd(args, "")
-
-	project_dir, err := os.get_working_directory(context.temp_allocator)
+	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
 		reflags.command_error(
 			"mimir run",
@@ -24,6 +22,8 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		)
 		os.exit(1)
 	}
+
+	rebuild := handle_build_cwd(args, project_dir)
 
 	exe_extension := ""
 	when ODIN_OS == .Windows {

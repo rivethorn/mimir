@@ -11,7 +11,8 @@ REPO="rivethorn/mimir"
 TEMP_DIR="$(mktemp -d)"
 ARCH=""
 OS=""
-OUTDIR="$HOME/.mimir/bin"
+OUTDIR="$HOME/.local/bin"
+LNKDIR="$HOME/.mimir/bin"
 
 cleanup() {
     rm -rf "$TEMP_DIR"
@@ -92,8 +93,10 @@ chmod +x "$MIMIR_BIN"
 
 # Place the downloaded binary directly at the destination (no bootstrap)
 mkdir -p "$OUTDIR"
+mkdir -p "$LNKDIR"
 cp "$MIMIR_BIN" "$OUTDIR/mimir"
 chmod +x "$OUTDIR/mimir"
+ln -s "$OUTDIR/mimir" "$LNKDIR/mimir"
 echo "Installed mimir to $OUTDIR/mimir"
 
 # Add ~/.mimir/bin to PATH in common shells (idempotent)

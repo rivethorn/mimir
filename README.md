@@ -3,7 +3,7 @@
 [Odin](https://odin-lang.org)'s little toolchain.
 
 > [!NOTE]
-Still in heavy development.
+> Still in heavy development.
 
 ---
 
@@ -19,10 +19,9 @@ The community leans on `git` for sharing code, and honestly, it works.
 
 So Mimir is not a package manager. It never will be, and it says so proudly.
 
-What Mimir *is*: a friendlier way to run the exact `git` commands you'd run
-anyway. `mimir add` clones a repo into your `pkgs/` directory. `mimir update`
-is a `git pull`. `mimir remove` deletes a folder. That's it — no registry,
-no lockfiles, no hidden machinery.
+What Mimir *is*: a friendlier way to run the commands you'd run
+anyway. Mimir wraps the tools Odin already gives you — `odin build`
+and the like — into a unified workflow that feels natural to Odin developers.
 
 Git is the source of truth. Mimir just holds the door open for you.
 
@@ -99,30 +98,26 @@ Everything you can do, in one place:
 | ------- | ------------ |
 | `mimir new <name>` | Scaffold a fresh Odin project (`src/`, `pkgs/`, `ols.json`, git init — the works) |
 | `mimir build` | Compile the current project into `bin/` |
-| `mimir run` | Build if needed, then run the thing |
-| `mimir add <site/owner/repo> [--name <custom>]` | `git clone`s a repo into `pkgs/` |
-| `mimir remove <pkg>` | Delete a package directory from `pkgs/` |
-| `mimir update <pkg>` | `git pull` a package from upstream |
-| `mimir list` | Show a pretty tree of everything in `pkgs/` |
-| `mimir install [<site/owner/repo>]` | Build a binary — the current project or a remote one — and install it on your system |
+| `mimir run [-- args]` | Build if needed, then run the project; pass arguments through with `--` |
+| `mimir install <repo>` | Build a binary — the current project (`.`) or a remote one — and install it on your system |
 | `mimir uninstall <pkg>` | Remove an installed binary from your system |
+| `mimir list` | Show installed packages |
 | `mimir clean` | Nuke `bin/` and all build artifacts |
 | `mimir version` | Tell you what version you're running |
 | `mimir help` | Show this help from inside the terminal |
 
-Short aliases cover the common ones — `mimir b` for build, `mimir r` for
-run. Useful when your hands are already on the keyboard.
+Short aliases cover the common ones — `mimir b` for build, `mimir r` for run.
+Useful when your hands are already on the keyboard.
 
 ### Options worth knowing
 
-- `--release` / `-r` on `build` and `run` compiles in release mode. Debug and
+- `-release` on `build` and `run` compiles in release mode. Debug and
   release binaries stay separate, so one never clobbers the other.
-- `--silent` / `-s` on `build` and `run` quiets the chit-chat and lets your
+- `-silent` on `build` and `run` quiets the chit-chat and lets your
   own output shine.
-- `--dry-run` / `-d` on `remove`, `update`, `uninstall`, and `clean` shows
-  you exactly what would happen before anything does. Nice when you're not
-  sure.
-- `--no-git` on `new` skips the `git init` when you manage version control
+- `-dry-run` on `uninstall` and `clean` shows you exactly what would
+  happen before anything does. Nice when you're not sure.
+- `-no-git` on `new` skips the `git init` when you manage version control
   yourself.
 - `run` is smart about it — it only rebuilds when your `src/` files have
   actually changed since the last build. Otherwise it says "Already at latest
@@ -154,17 +149,22 @@ then importing it as `pkgs:something` just works — no hand-typed
 
 ## Current state
 
-Every command is wired up and working: `new`, `build`, `run`, `add`,
-`remove`, `update`, `list`, `install`, `uninstall`, `clean`, `version`, and
-`help` — each with its own `--help`. `install` builds straight into release
-mode and drops the binary on your system; `uninstall` takes it right back
-off.
+Every command is wired up and working: `new`, `build`, `run`, `install`,
+`uninstall`, `list`, `clean`, `version`, and `help` — each with its own
+`-help`. `install` builds straight into release mode and installs the
+binary on your system; `uninstall` takes it right back off.
 
-It's still young, so expect a rough edge or two. Hit one? File it. It's appreciated in advance!
+The codebase uses the `reflags` package for consistent command-line parsing
+throughout, making the CLI clean and maintainable. Smart rebuild detection
+keeps iteration fast — changes to your `src/` trigger rebuilds, but unchanged
+projects skip the rebuild step entirely.
 
-The project follows Odin conventions loosely — `src/` for your code, `pkgs/`
-for everything else — and each package keeps its own tiny package directory
-so the language server (`ols`) can see them cleanly.
+It's still young, so expect a rough edge or two. Hit one? File it. It's
+appreciated in advance!
+
+The project follows Odin conventions — `src/` for your code, `pkgs/` for
+everything else — and each internal package is cleanly separated so the
+language server (`ols`) can see them cleanly.
 
 ---
 
@@ -174,9 +174,9 @@ Mimir was built out of love for Odin's stance: few moving parts, no
 ceremony, the tools you need and nothing you don't. The last thing it wants
 to become is a layer of abstraction that hides the actual work from you.
 
-So Mimir stays honest. It wraps `git`. It shares your `ols.json`. It puts
-packages in a normal folder you could manage by hand if you ever wanted to.
-If Mimir vanished tomorrow, you'd lose nothing — your code, your
+So Mimir stays honest. It wraps `odin` and `git`. It shares your `ols.json`.
+It puts packages in a normal folder you could manage by hand if you ever
+wanted to. If Mimir vanished tomorrow, you'd lose nothing — your code, your
 dependencies, and your repo would all still be right there.
 
 It's not a package manager, and it never will be. It's just a kinder way to

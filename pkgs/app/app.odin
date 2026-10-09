@@ -76,6 +76,10 @@ build_cli :: proc() -> reflags.CLI {
 		&new_cmd.options,
 		reflags.opt_flag("no-git", "", "Do not initialize a git repository"),
 	)
+	append(
+		&new_cmd.options,
+		reflags.opt_flag("lib", "l", "Scaffold a library instead of a binary"),
+	)
 	new_cmd.handler = command.handle_new
 
 	// 'install' command with note and 'repo' argument

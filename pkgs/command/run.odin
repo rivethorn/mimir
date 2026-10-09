@@ -12,6 +12,7 @@ import "pkgs:reflags"
 handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	release := reflags.get_bool(args, "release")
 	silent := reflags.get_bool(args, "silent")
+	pkg := reflags.get_string(args, "pkg")
 	run_args := reflags.get_strings(args, "args")
 
 	project_dir, err := os.get_working_directory(context.allocator)
@@ -23,6 +24,15 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		os.exit(1)
 	}
 
+	target := resolve_build_target(pkg, project_dir, "mimir run", "run", true)
+	if pkg != "" && target.is_default {
+		// Not a package directory: the argument belongs to the program.
+		extra := make([dynamic]string, 0, len(run_args) + 1, context.allocator)
+		append(&extra, pkg)
+		append(&extra, ..run_args)
+		run_args = extra[:]
+	}
+
 	rebuild := handle_build_cwd(args, project_dir)
 
 	exe_extension := ""
@@ -30,9 +40,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		exe_extension = ".exe"
 	}
 
-	project_name := filepath.base(project_dir)
-
-	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+	exe_name := fmt.tprintf("%s%s", target.exe_base, exe_extension)
 
 	bin_path, _ := filepath.join(
 		{project_dir, "bin", release ? "release" : "debug", exe_name},
@@ -59,7 +67,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 				"     Running ",
 				cli.color_ansi(ansi.RESET),
 				"`",
-				project_name,
+				target.exe_base,
 				"`",
 				cli.color_ansi(ansi.FAINT),
 				rebuild ? "" : " in release mode",
@@ -74,7 +82,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 				"     Running ",
 				cli.color_ansi(ansi.RESET),
 				"`",
-				project_name,
+				target.exe_base,
 				"`",
 				cli.color_ansi(ansi.FAINT),
 				rebuild ? "" : " in debug mode",

@@ -30,11 +30,25 @@ build_cli :: proc() -> reflags.CLI {
 		&build_cmd.options,
 		reflags.opt_flag("silent", "s", "Silent the terminal output"),
 	)
+	append(
+		&build_cmd.notes,
+		"Give a package directory to build it instead of src/, e.g. mimir build tools/migrate",
+	)
+	build_pkg_builder := reflags.argument(
+		"pkg",
+		"Package directory to build (defaults to src/)",
+	)
+	reflags.arg_optional(&build_pkg_builder)
+	append(&build_cmd.arguments, reflags.arg_build(build_pkg_builder))
 	build_cmd.handler = command.handle_build
 
 	// 'run' command with 'release' and 'silent' flags, note, and 'args' passing into the app
 	run_cmd := reflags.command("run", "Build if needed, then run the project")
 	run_cmd.alias = "r"
+	append(
+		&run_cmd.notes,
+		"If the first argument names a package directory with a main procedure, that package is built and run instead",
+	)
 	append(
 		&run_cmd.notes,
 		"Use '--' to pass arguments through to your project, e.g. mimir run -- arg1",
@@ -51,6 +65,12 @@ build_cli :: proc() -> reflags.CLI {
 		&run_cmd.options,
 		reflags.opt_flag("silent", "s", "Silent the terminal output"),
 	)
+	run_pkg_builder := reflags.argument(
+		"pkg",
+		"Package directory to build and run instead of src/",
+	)
+	reflags.arg_optional(&run_pkg_builder)
+	append(&run_cmd.arguments, reflags.arg_build(run_pkg_builder))
 	run_args_builder := reflags.argument(
 		"args",
 		"Arguments passed through to the project",

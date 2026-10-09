@@ -5,6 +5,7 @@ import "core:encoding/json"
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
+import "core:strings"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
@@ -280,6 +281,7 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	release := reflags.get_bool(args, "release")
 	silent := reflags.get_bool(args, "silent")
+	pkg := reflags.get_string(args, "pkg")
 
 	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
@@ -290,19 +292,22 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		os.exit(1)
 	}
 
-	source_dir, _ := filepath.join(
-		{project_dir, "src"},
-		context.temp_allocator,
-	)
+	target := resolve_build_target(pkg, project_dir, "mimir build", "build", false)
 
-	project_name := filepath.base(project_dir)
+	source_abs := target.src_path
+	if !filepath.is_abs(source_abs) {
+		source_abs, _ = filepath.join(
+			{project_dir, target.src_path},
+			context.temp_allocator,
+		)
+	}
 
 	exe_extension := ""
 	when ODIN_OS == .Windows {
 		exe_extension = ".exe"
 	}
 
-	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+	exe_name := fmt.tprintf("%s%s", target.exe_base, exe_extension)
 
 	output: string
 	if release {
@@ -316,8 +321,7 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			context.allocator,
 		)
 	}
-
-	if !silent && !needs_rebuild(source_dir, output) {
+	if !silent && !needs_rebuild(source_abs, output) {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -347,13 +351,12 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	}
 
 	config := Build_Config {
-		name     = project_name,
-		src_path = "src",
+		name     = target.exe_base,
+		src_path = target.src_path,
 		output   = output,
 		release  = release,
 		silent   = silent,
 	}
-
 	build_err := start_build(&config, project_dir)
 	if build_err != nil {
 		reflags.command_error("mimir build", fmt.tprintf("%v", build_err))
@@ -376,20 +379,31 @@ handle_build_cwd :: proc(
 		args.command.name == "install" ? true : reflags.get_bool(args, "release")
 	silent :=
 		args.command.name == "install" ? false : reflags.get_bool(args, "silent")
+	pkg := reflags.get_string(args, "pkg")
 
-	source_dir, _ := filepath.join(
-		{project_dir, "src"},
-		context.temp_allocator,
+	cmd_label := fmt.tprintf("mimir %s", args.command.name)
+	target := resolve_build_target(
+		pkg,
+		project_dir,
+		cmd_label,
+		args.command.name,
+		args.command.name == "run",
 	)
 
-	project_name := filepath.base(project_dir)
+	source_abs := target.src_path
+	if !filepath.is_abs(source_abs) {
+		source_abs, _ = filepath.join(
+			{project_dir, target.src_path},
+			context.temp_allocator,
+		)
+	}
 
 	exe_extension := ""
 	when ODIN_OS == .Windows {
 		exe_extension = ".exe"
 	}
 
-	exe_name := fmt.tprintf("%s%s", project_name, exe_extension)
+	exe_name := fmt.tprintf("%s%s", target.exe_base, exe_extension)
 
 	output: string
 	if release {
@@ -404,7 +418,7 @@ handle_build_cwd :: proc(
 		)
 	}
 
-	if !needs_rebuild(source_dir, output) {
+	if !needs_rebuild(source_abs, output) {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -434,8 +448,8 @@ handle_build_cwd :: proc(
 	}
 
 	config := Build_Config {
-		name     = project_name,
-		src_path = "src",
+		name     = target.exe_base,
+		src_path = target.src_path,
 		output   = output,
 		release  = release,
 		silent   = silent,

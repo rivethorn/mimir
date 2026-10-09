@@ -132,9 +132,11 @@ Useful when your hands are already on the keyboard.
   tools/one.odin` does the same for one file (named after the file,
   built with odin's `-file` under the hood). Either form must hold a
   `main` procedure (bare names also resolve under `src/`, and naming
-  `src/` itself is just the default build). For `run`, a first argument
-  that resolves to nothing — or to a file odin can't build — is passed
-  through to your program as before.
+  `src/` itself is just the default build). With an explicit target,
+  `build` and `run` work outside a project too — the binary still lands
+  in `bin/`, and `ols.json` collections apply when one is around. For
+  `run`, a first argument that resolves to nothing — or to a file odin
+  can't build — is passed through to your program as before.
 - `-dry-run` on `uninstall` and `clean` shows you exactly what would
   happen before anything does. Nice when you're not sure.
 - `-no-git` on `new` skips the `git init` when you manage version control

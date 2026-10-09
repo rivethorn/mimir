@@ -6,6 +6,7 @@ import "core:os"
 import "core:path/filepath"
 import "core:strings"
 import "pkgs:reflags"
+import "pkgs:util"
 
 Build_Target :: struct {
 	// src_path is handed to `odin build`, relative to cwd when possible.
@@ -158,6 +159,19 @@ resolve_build_target :: proc(
 		src_path = strings.clone(src_form, context.allocator),
 		exe_base = strings.clone(filepath.base(pkg_path), context.allocator),
 		is_default = false,
+	}
+}
+
+// require_project exits with the standard guard error unless dir holds a
+// Mimir project. Used when falling back to the default src/ build.
+require_project :: proc(dir, cmd_label, hint_name: string) {
+	if !util.is_odin_project_in(dir) {
+		reflags.command_error(
+			cmd_label,
+			"Current directory does not contain a valid Odin project for Mimir to work with.",
+		)
+		reflags.error_hint(hint_name)
+		os.exit(1)
 	}
 }
 

@@ -10,7 +10,8 @@ import "core:thread"
 import "pkgs:cli"
 
 command_exists :: proc(command_name: string) -> bool {
-	defer free_all(context.temp_allocator)
+	// NOTE: no free_all here on purpose. Callers may hold temp memory
+	// across this call; each command frees temp when it is done.
 	path_env, found := os.lookup_env("PATH", context.temp_allocator)
 	if !found {return false}
 
@@ -115,10 +116,14 @@ is_odin_project :: proc() -> bool {
 		os.exit(1)
 	}
 
-	source_dir, _ := filepath.join(
-		{project_dir, "src"},
-		context.temp_allocator,
-	)
+	return is_odin_project_in(project_dir)
+}
+
+// is_odin_project_in reports whether dir holds a Mimir project: a src/
+// with Odin files plus an ols.json.
+is_odin_project_in :: proc(dir: string) -> bool {
+	defer free_all(context.temp_allocator)
+	source_dir, _ := filepath.join({dir, "src"}, context.temp_allocator)
 
 	if !os.exists(source_dir) {
 		return false
@@ -133,10 +138,7 @@ is_odin_project :: proc() -> bool {
 
 	os.walker_destroy(&walker)
 
-	ols_path, _ := filepath.join(
-		{project_dir, "ols.json"},
-		context.temp_allocator,
-	)
+	ols_path, _ := filepath.join({dir, "ols.json"}, context.temp_allocator)
 
 	if !os.exists(ols_path) {
 		return false

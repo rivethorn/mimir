@@ -54,14 +54,21 @@ parse_and_run :: proc() {
 		os.exit(0)
 	}
 
-	if is_project_command(parsed.command.name) && !util.is_odin_project() {
-		cmd_name := parsed.command.name
-		reflags.command_error(
-			fmt.tprintf("mimir %s", cmd_name),
-			"Current directory does not contain a valid Odin project for Mimir to work with.",
-		)
-		reflags.error_hint(cmd_name)
-		os.exit(1)
+	cmd_name := parsed.command.name
+	if is_project_command(cmd_name) && !util.is_odin_project() {
+		// An explicit build target stands on its own: the handler resolves
+		// it (or errors) without needing a project around it.
+		explicit_target :=
+			(cmd_name == "build" || cmd_name == "run") &&
+			reflags.get_string(parsed, "pkg") != ""
+		if !explicit_target {
+			reflags.command_error(
+				fmt.tprintf("mimir %s", cmd_name),
+				"Current directory does not contain a valid Odin project for Mimir to work with.",
+			)
+			reflags.error_hint(cmd_name)
+			os.exit(1)
+		}
 	}
 
 	if parsed.command.name == "install" {

@@ -35,6 +35,11 @@ Build_Config :: struct {
 get_collections :: proc(cwd: string) -> [dynamic]string {
 	config: Ols
 
+	// Outside a project there is no ols.json: build with no collections.
+	if !os.exists("ols.json") {
+		return make([dynamic]string, 0, 4, context.temp_allocator)
+	}
+
 	config_file, err := os.read_entire_file("ols.json", context.temp_allocator)
 	if err != nil {
 		reflags.command_error(
@@ -298,6 +303,9 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	}
 
 	target := resolve_build_target(pkg, project_dir, "mimir build", "build", false)
+	if target.is_default {
+		require_project(project_dir, "mimir build", "build")
+	}
 
 	source_abs := target.src_path
 	if !filepath.is_abs(source_abs) {
@@ -387,7 +395,10 @@ handle_build_cwd :: proc(
 		args.command.name == "install" ? false : reflags.get_bool(args, "silent")
 	pkg := reflags.get_string(args, "pkg")
 
-	cmd_label := fmt.tprintf("mimir %s", args.command.name)
+	cmd_label := strings.clone(
+		fmt.tprintf("mimir %s", args.command.name),
+		context.allocator,
+	)
 	target := resolve_build_target(
 		pkg,
 		project_dir,
@@ -395,6 +406,9 @@ handle_build_cwd :: proc(
 		args.command.name,
 		args.command.name == "run",
 	)
+	if target.is_default {
+		require_project(project_dir, cmd_label, args.command.name)
+	}
 
 	source_abs := target.src_path
 	if !filepath.is_abs(source_abs) {

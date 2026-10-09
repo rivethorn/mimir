@@ -30,12 +30,6 @@ jobs:
             odin_os: linux
             odin_arch: arm64
             odin_ext: tar.gz
-          - os: macos-15-intel
-            platform: macos
-            arch: x64
-            odin_os: macos
-            odin_arch: amd64
-            odin_ext: tar.gz
           - os: macos-15
             platform: macos
             arch: arm64

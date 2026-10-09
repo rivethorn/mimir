@@ -12,16 +12,20 @@ Build_Target :: struct {
 	src_path: string,
 	// exe_base names the binary: the package directory's name, or the
 	// project directory's name for the default src/ build.
-	exe_base:   string,
+	exe_base: string,
+	// is_default reports the default src/ build with no package argument
+	// given or (for run) an unresolvable one. Naming src/ outright still
+	// consumes the argument, so it comes back false.
 	is_default: bool,
 }
 
 // resolve_build_target turns the optional `pkg` argument into a Build_Target.
 // Empty means the default src/ build. Otherwise the argument is a package
-// directory: resolved as-given relative to cwd, then under src/. It must
-// exist, hold .odin files, and declare a main procedure. When
-// fallback_default is set (mimir run), an unresolvable argument instead
-// yields the default target so the caller can pass it to the program.
+// directory: resolved as-given relative to cwd, then under src/. Naming
+// src/ itself is the default build. Otherwise the directory must hold
+// .odin files and declare a main procedure. When fallback_default is set
+// (mimir run), an unresolvable argument instead yields the default target
+// so the caller can pass it to the program.
 resolve_build_target :: proc(
 	pkg_arg, cwd, cmd_label, hint_name: string,
 	fallback_default: bool,
@@ -88,6 +92,20 @@ resolve_build_target :: proc(
 		)
 		reflags.error_hint(hint_name)
 		os.exit(1)
+	}
+
+	// Naming src/ outright is just the default build: same sources, same
+	// binary name. The argument still counts as consumed (is_default stays
+	// false) so `run src` doesn't pass "src" to the program.
+	default_src, _ := filepath.join({cwd, "src"}, context.temp_allocator)
+	clean_pkg, _ := filepath.clean(pkg_dir, context.temp_allocator)
+	clean_default, _ := filepath.clean(default_src, context.temp_allocator)
+	if clean_pkg == clean_default {
+		return Build_Target {
+			src_path = "src",
+			exe_base = filepath.base(cwd),
+			is_default = false,
+		}
 	}
 
 	return Build_Target {

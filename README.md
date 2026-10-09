@@ -108,8 +108,8 @@ Everything you can do, in one place:
 | command | what it does |
 | ------- | ------------ |
 | `mimir new <name> [-lib]` | Scaffold a fresh Odin project (`src/`, `pkgs/`, `ols.json`, git init — the works; `-lib` scaffolds a library instead) |
-| `mimir build` | Compile the current project into `bin/` |
-| `mimir run [-- args]` | Build if needed, then run the project; pass arguments through with `--` |
+| `mimir build [pkg]` | Compile `src/` — or the given package directory — into `bin/`, named after the directory |
+| `mimir run [pkg] [-- args]` | Build if needed, then run the project or package; pass arguments through with `--` |
 | `mimir install <repo>` | Build a binary — the current project (`.`) or a remote one — and install it on your system |
 | `mimir uninstall <pkg>` | Remove an installed binary from your system |
 | `mimir list` | Show installed packages |
@@ -126,6 +126,12 @@ Useful when your hands are already on the keyboard.
   release binaries stay separate, so one never clobbers the other.
 - `-silent` on `build` and `run` quiets the chit-chat and lets your
   own output shine.
+- `build` and `run` take an optional package directory: `mimir build
+  tools/migrate` compiles that package — named after the directory —
+  into `bin/` instead of `src/`. The directory must hold a `main`
+  procedure (bare names also resolve under `src/`). For `run`, a first
+  argument that isn't a package directory is passed through to your
+  program as before.
 - `-dry-run` on `uninstall` and `clean` shows you exactly what would
   happen before anything does. Nice when you're not sure.
 - `-no-git` on `new` skips the `git init` when you manage version control

@@ -126,13 +126,15 @@ Useful when your hands are already on the keyboard.
   release binaries stay separate, so one never clobbers the other.
 - `-silent` on `build` and `run` quiets the chit-chat and lets your
   own output shine.
-- `build` and `run` take an optional package directory: `mimir build
-  tools/migrate` compiles that package — named after the directory —
-  into `bin/` instead of `src/`. The directory must hold a `main`
-  procedure (bare names also resolve under `src/`, and naming `src/`
-  itself is just the default build). For `run`, a first
-  argument that isn't a package directory is passed through to your
-  program as before.
+- `build` and `run` take an optional package directory or single Odin
+  file: `mimir build tools/migrate` compiles that package — named after
+  the directory — into `bin/` instead of `src/`, and `mimir run
+  tools/one.odin` does the same for one file (named after the file,
+  built with odin's `-file` under the hood). Either form must hold a
+  `main` procedure (bare names also resolve under `src/`, and naming
+  `src/` itself is just the default build). For `run`, a first argument
+  that resolves to nothing — or to a file odin can't build — is passed
+  through to your program as before.
 - `-dry-run` on `uninstall` and `clean` shows you exactly what would
   happen before anything does. Nice when you're not sure.
 - `-no-git` on `new` skips the `git init` when you manage version control

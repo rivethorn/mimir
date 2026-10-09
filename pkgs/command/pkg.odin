@@ -42,7 +42,7 @@ resolve_build_target :: proc(
 		}
 	}
 
-	rel := strings.trim(pkg_arg, "/\\")
+	rel := strings.trim_right(pkg_arg, "/\\")
 
 	pkg_path := ""
 	src_form := ""

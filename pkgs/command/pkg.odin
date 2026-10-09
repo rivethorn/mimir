@@ -10,9 +10,12 @@ import "pkgs:reflags"
 Build_Target :: struct {
 	// src_path is handed to `odin build`, relative to cwd when possible.
 	src_path: string,
-	// exe_base names the binary: the package directory's name, or the
-	// project directory's name for the default src/ build.
+	// exe_base names the binary: the package directory's name, the file
+	// stem for a single file, or the project directory's name for the
+	// default src/ build.
 	exe_base: string,
+	// is_file marks a single-file target, which odin builds with -file.
+	is_file: bool,
 	// is_default reports the default src/ build with no package argument
 	// given or (for run) an unresolvable one. Naming src/ outright still
 	// consumes the argument, so it comes back false.
@@ -20,12 +23,13 @@ Build_Target :: struct {
 }
 
 // resolve_build_target turns the optional `pkg` argument into a Build_Target.
-// Empty means the default src/ build. Otherwise the argument is a package
-// directory: resolved as-given relative to cwd, then under src/. Naming
-// src/ itself is the default build. Otherwise the directory must hold
-// .odin files and declare a main procedure. When fallback_default is set
-// (mimir run), an unresolvable argument instead yields the default target
-// so the caller can pass it to the program.
+// Empty means the default src/ build. Otherwise the argument names buildable
+// source: a package directory or a single Odin file, resolved as-given
+// relative to cwd, then under src/. Naming src/ itself is the default build.
+// A directory must hold .odin files; either form must declare a main
+// procedure. When fallback_default is set (mimir run), an argument that
+// resolves to nothing — or to a file odin can't build — instead yields the
+// default target so the caller can pass it to the program.
 resolve_build_target :: proc(
 	pkg_arg, cwd, cmd_label, hint_name: string,
 	fallback_default: bool,
@@ -40,27 +44,48 @@ resolve_build_target :: proc(
 
 	rel := strings.trim(pkg_arg, "/\\")
 
-	pkg_dir := ""
+	pkg_path := ""
 	src_form := ""
+	is_file := false
 	if rel != "" {
 		abs := rel
 		if !filepath.is_abs(rel) {
 			abs, _ = filepath.join({cwd, rel}, context.temp_allocator)
 		}
-		if os.is_dir(abs) {
-			pkg_dir = abs
-			src_form = rel
-		} else {
+		kind := classify_build_source(abs)
+		if kind == .Missing {
 			rel2 := fmt.tprintf("src/%s", rel)
 			abs2, _ := filepath.join({cwd, rel2}, context.temp_allocator)
-			if os.is_dir(abs2) {
-				pkg_dir = abs2
+			kind = classify_build_source(abs2)
+			if kind != .Missing {
+				pkg_path = abs2
 				src_form = rel2
+			}
+		} else {
+			pkg_path = abs
+			src_form = rel
+		}
+		if pkg_path != "" {
+			is_file = kind == .Odin_File
+			if kind == .Other_File {
+				if fallback_default {
+					return Build_Target {
+						src_path = "src",
+						exe_base = filepath.base(cwd),
+						is_default = true,
+					}
+				}
+				reflags.command_error(
+					cmd_label,
+					fmt.tprintf("'%s' is not an Odin file", pkg_arg),
+				)
+				reflags.error_hint(hint_name)
+				os.exit(1)
 			}
 		}
 	}
 
-	if pkg_dir == "" {
+	if pkg_path == "" {
 		if fallback_default {
 			return Build_Target {
 				src_path = "src",
@@ -70,13 +95,34 @@ resolve_build_target :: proc(
 		}
 		reflags.command_error(
 			cmd_label,
-			fmt.tprintf("Unknown package directory '%s'", pkg_arg),
+			fmt.tprintf("Unknown package '%s'", pkg_arg),
 		)
 		reflags.error_hint(hint_name)
 		os.exit(1)
 	}
 
-	has_odin, has_main := scan_pkg_dir(pkg_dir)
+	if is_file {
+		data, data_err := os.read_entire_file(pkg_path, context.temp_allocator)
+		if data_err != nil || !odin_src_has_main(string(data)) {
+			reflags.command_error(
+				cmd_label,
+				fmt.tprintf("File '%s' has no main procedure", rel),
+			)
+			reflags.error_hint(hint_name)
+			os.exit(1)
+		}
+		return Build_Target {
+			src_path = strings.clone(src_form, context.allocator),
+			exe_base = strings.clone(
+				filepath.stem(pkg_path),
+				context.allocator,
+			),
+			is_file = true,
+			is_default = false,
+		}
+	}
+
+	has_odin, has_main := scan_pkg_dir(pkg_path)
 	if !has_odin {
 		reflags.command_error(
 			cmd_label,
@@ -98,7 +144,7 @@ resolve_build_target :: proc(
 	// binary name. The argument still counts as consumed (is_default stays
 	// false) so `run src` doesn't pass "src" to the program.
 	default_src, _ := filepath.join({cwd, "src"}, context.temp_allocator)
-	clean_pkg, _ := filepath.clean(pkg_dir, context.temp_allocator)
+	clean_pkg, _ := filepath.clean(pkg_path, context.temp_allocator)
 	clean_default, _ := filepath.clean(default_src, context.temp_allocator)
 	if clean_pkg == clean_default {
 		return Build_Target {
@@ -110,9 +156,31 @@ resolve_build_target :: proc(
 
 	return Build_Target {
 		src_path = strings.clone(src_form, context.allocator),
-		exe_base = strings.clone(filepath.base(pkg_dir), context.allocator),
+		exe_base = strings.clone(filepath.base(pkg_path), context.allocator),
 		is_default = false,
 	}
+}
+
+// Target_Kind classifies a candidate build source: a package directory, a
+// single Odin file, an existing file odin can't build, or nothing at all.
+Target_Kind :: enum {
+	Missing,
+	Dir,
+	Odin_File,
+	Other_File,
+}
+
+classify_build_source :: proc(path: string) -> Target_Kind {
+	if !os.exists(path) {
+		return .Missing
+	}
+	if os.is_dir(path) {
+		return .Dir
+	}
+	if filepath.ext(path) == ".odin" {
+		return .Odin_File
+	}
+	return .Other_File
 }
 
 // scan_pkg_dir reports whether dir holds .odin files and whether any of

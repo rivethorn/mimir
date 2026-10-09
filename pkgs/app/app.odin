@@ -32,11 +32,11 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	append(
 		&build_cmd.notes,
-		"Give a package directory to build it instead of src/, e.g. mimir build tools/migrate",
+		"Give a package directory or Odin file to build it instead of src/, e.g. mimir build tools/migrate",
 	)
 	build_pkg_builder := reflags.argument(
 		"pkg",
-		"Package directory to build (defaults to src/)",
+		"Package directory or Odin file to build (defaults to src/)",
 	)
 	reflags.arg_optional(&build_pkg_builder)
 	append(&build_cmd.arguments, reflags.arg_build(build_pkg_builder))
@@ -47,7 +47,7 @@ build_cli :: proc() -> reflags.CLI {
 	run_cmd.alias = "r"
 	append(
 		&run_cmd.notes,
-		"If the first argument names a package directory with a main procedure, that package is built and run instead",
+		"If the first argument names a package directory or Odin file with a main procedure, it is built and run instead",
 	)
 	append(
 		&run_cmd.notes,
@@ -67,7 +67,7 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	run_pkg_builder := reflags.argument(
 		"pkg",
-		"Package directory to build and run instead of src/",
+		"Package directory or Odin file to build and run instead of src/",
 	)
 	reflags.arg_optional(&run_pkg_builder)
 	append(&run_cmd.arguments, reflags.arg_build(run_pkg_builder))

@@ -26,6 +26,8 @@ Build_Config :: struct {
 	src_path:        string,
 	output:          string,
 	release, silent: bool,
+	// is_file builds a single file with `odin build -file`.
+	is_file:         bool,
 }
 
 
@@ -173,6 +175,9 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 		output,
 		release_mode,
 		debug_flag,
+	}
+	if config.is_file {
+		append(&command, "-file")
 	}
 	defer delete(command)
 
@@ -356,6 +361,7 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		output   = output,
 		release  = release,
 		silent   = silent,
+		is_file  = target.is_file,
 	}
 	build_err := start_build(&config, project_dir)
 	if build_err != nil {
@@ -453,6 +459,7 @@ handle_build_cwd :: proc(
 		output   = output,
 		release  = release,
 		silent   = silent,
+		is_file  = target.is_file,
 	}
 
 	build_err := start_build(&config, cwd)

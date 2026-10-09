@@ -129,7 +129,8 @@ Useful when your hands are already on the keyboard.
 - `build` and `run` take an optional package directory: `mimir build
   tools/migrate` compiles that package — named after the directory —
   into `bin/` instead of `src/`. The directory must hold a `main`
-  procedure (bare names also resolve under `src/`). For `run`, a first
+  procedure (bare names also resolve under `src/`, and naming `src/`
+  itself is just the default build). For `run`, a first
   argument that isn't a package directory is passed through to your
   program as before.
 - `-dry-run` on `uninstall` and `clean` shows you exactly what would

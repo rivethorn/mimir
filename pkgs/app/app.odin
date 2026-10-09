@@ -3,7 +3,7 @@ package app
 import "pkgs:command"
 import "pkgs:reflags"
 
-VERSION :: "0.13.2"
+VERSION :: "0.14.0"
 
 // build_cli constructs the reflags description of Mimir's command line.
 // Each command has its handler attached so reflags can dispatch after parsing.

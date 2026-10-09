@@ -88,6 +88,17 @@ my-project/
 `mimir new` scaffolds all of this — including a `git init` — so you rarely
 have to think about it.
 
+With `-lib`, you get the library outline instead — no `src/` or `pkgs/`,
+just your package file at the top level, ready to be cloned straight into
+someone's `pkgs/`:
+
+```
+my-lib/
+├── my-lib.odin  # package my_lib
+├── ols.json
+└── odinfmt.json
+```
+
 ---
 
 ## Commands
@@ -96,7 +107,7 @@ Everything you can do, in one place:
 
 | command | what it does |
 | ------- | ------------ |
-| `mimir new <name>` | Scaffold a fresh Odin project (`src/`, `pkgs/`, `ols.json`, git init — the works) |
+| `mimir new <name> [-lib]` | Scaffold a fresh Odin project (`src/`, `pkgs/`, `ols.json`, git init — the works; `-lib` scaffolds a library instead) |
 | `mimir build` | Compile the current project into `bin/` |
 | `mimir run [-- args]` | Build if needed, then run the project; pass arguments through with `--` |
 | `mimir install <repo>` | Build a binary — the current project (`.`) or a remote one — and install it on your system |
@@ -119,6 +130,10 @@ Useful when your hands are already on the keyboard.
   happen before anything does. Nice when you're not sure.
 - `-no-git` on `new` skips the `git init` when you manage version control
   yourself.
+- `-lib` on `new` scaffolds a library instead of a binary: no `src/` or
+  `pkgs/`, just a top-level `[name].odin` carrying `package [name]`.
+  Dashes become underscores (`my-lib` → `package my_lib`), and the
+  `.gitignore` leaves the binary name out since there is none.
 - `run` is smart about it — it only rebuilds when your `src/` files have
   actually changed since the last build. Otherwise it says "Already at latest
   change" and gets on with running.
@@ -140,6 +155,20 @@ main :: proc() {
 ```
 
 (`Hellope` is an Odin tradition. You'll get used to it. It grows on you.)
+
+With `-lib`, `mimir new mylib` gives you `mylib/mylib.odin` instead:
+
+```odin
+package mylib
+
+hello :: proc() -> string {
+    return "Hellope!"
+}
+```
+
+Same tradition, library-shaped: no `src/` or `pkgs/`, and the `ols.json`
+carries no `pkgs` collection since there is none to point at. Clone it
+into a project's `pkgs/` and import it by folder name.
 
 Because Mimir reads your `ols.json` for `collections`, adding a package and
 then importing it as `pkgs:something` just works — no hand-typed

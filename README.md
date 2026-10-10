@@ -1,9 +1,10 @@
 # Mimir
 
-[Odin](https://odin-lang.org)'s little toolchain.
+<div align="center" style="">
+    <img src="assets/banner.png" style="height: auto; width: 30vw; object-fit: cover"/>
+</div>
 
-> [!NOTE]
-> Still in heavy development.
+[Odin](https://odin-lang.org)'s little toolchain.
 
 ---
 

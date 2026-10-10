@@ -57,6 +57,7 @@ jobs:
           odin_arch: ${{ matrix.odin_arch }}
           odin_ext: ${{ matrix.odin_ext }}
           odin_release: ${{ env.ODIN_RELEASE }}
+          github_token: ${{ github.token }}
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4

@@ -1,5 +1,5 @@
-<div align="center" style="">
-    <img src="assets/banner.png" style="height: auto; width: 60%; object-fit: cover"/>
+<div align="center">
+    <img src="assets/banner.png"/>
     <div style="text-align: center; font-style: italic; margin-top: 0.5rem;">
         <a href="https://odin-lang.org">Odin</a>'s little toolchain.
     </div>

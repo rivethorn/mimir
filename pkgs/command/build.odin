@@ -83,14 +83,14 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 		context.temp_allocator,
 	)
 
-	if err := os.make_directory(bin_dir); err != nil {
+	if mk_err := os.make_directory(bin_dir); mk_err != nil {
 		if !os.exists(bin_dir) {
 			reflags.command_error(
 				"mimir build",
 				fmt.tprintf(
 					"Failed to create directory '%s': %v",
 					bin_dir,
-					err,
+					mk_err,
 				),
 			)
 			os.exit(1)
@@ -349,14 +349,14 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	}
 
 	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
-	if err := os.make_directory(bin_dir); err != nil {
+	if mk_err := os.make_directory(bin_dir); mk_err != nil {
 		if !os.exists(bin_dir) {
 			reflags.command_error(
 				"mimir build",
 				fmt.tprintf(
 					"Failed to create directory '%s': %v",
 					bin_dir,
-					err,
+					mk_err,
 				),
 			)
 			os.exit(1)
@@ -453,14 +453,14 @@ handle_build_cwd :: proc(
 	}
 
 	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
-	if err := os.make_directory(bin_dir); err != nil {
+	if mk_err := os.make_directory(bin_dir); mk_err != nil {
 		if !os.exists(bin_dir) {
 			reflags.command_error(
 				"mimir build",
 				fmt.tprintf(
 					"Failed to create directory '%s': %v",
 					bin_dir,
-					err,
+					mk_err,
 				),
 			)
 			os.exit(1)

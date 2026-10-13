@@ -4,7 +4,6 @@ import "core:fmt"
 import "core:os"
 import "core:path/filepath"
 import "core:sys/posix"
-import "core:sys/windows"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
@@ -94,7 +93,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	}
 
 	when ODIN_OS == .Windows {
-		windows.SetConsoleCtrlHandler(nil, true)
+		setup_console_ctrl_handler()
 	} else {
 		posix.signal(.SIGINT, nil)
 	}

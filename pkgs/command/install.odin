@@ -66,8 +66,8 @@ handle_install :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 		handle_build_cwd(args, project_dir)
 
-		if err := os.copy_directory_all(bin_dir, output_bin); err != nil {
-			reflags.command_error("mimir install", os.error_string(err))
+		if copy_err := os.copy_directory_all(bin_dir, output_bin); copy_err != nil {
+			reflags.command_error("mimir install", os.error_string(copy_err))
 			os.exit(1)
 		}
 

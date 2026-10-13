@@ -146,7 +146,7 @@ get_string :: proc(args: Parsed_Args, name: string, default_val: string = "") ->
 // it was not provided or cannot be parsed.
 get_int :: proc(args: Parsed_Args, name: string, default_val: int = 0) -> int {
 	if val, ok := args.values[name]; ok {
-		if i, ok := strconv.parse_int(val, 10); ok {
+		if i, parsed_ok := strconv.parse_int(val, 10); parsed_ok {
 			return int(i)
 		}
 	}
@@ -157,7 +157,7 @@ get_int :: proc(args: Parsed_Args, name: string, default_val: int = 0) -> int {
 // true), or default_val if it was not provided.
 get_bool :: proc(args: Parsed_Args, name: string, default_val: bool = false) -> bool {
 	if val, ok := args.values[name]; ok {
-		if b, ok := strconv.parse_bool(val); ok {
+		if b, parsed_ok := strconv.parse_bool(val); parsed_ok {
 			return b
 		}
 		if val == "true" || val == "1" {
@@ -171,7 +171,7 @@ get_bool :: proc(args: Parsed_Args, name: string, default_val: bool = false) -> 
 // it was not provided or cannot be parsed.
 get_float :: proc(args: Parsed_Args, name: string, default_val: f64 = 0.0) -> f64 {
 	if val, ok := args.values[name]; ok {
-		if f, ok := strconv.parse_f64(val); ok {
+		if f, parsed_ok := strconv.parse_f64(val); parsed_ok {
 			return f
 		}
 	}

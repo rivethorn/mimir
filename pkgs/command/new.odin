@@ -247,12 +247,12 @@ handle_new :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			os.exit(1)
 		}
 		proj, _ := filepath.join({cwd, project_dir})
-		if _, err := os.process_start(
+		if _, start_err := os.process_start(
 			{command = {"git", "init"}, working_dir = proj},
-		); err != nil {
+		); start_err != nil {
 			reflags.command_error(
 				"mimir new",
-				fmt.tprintf("Failed to initialize git repo: %v", err),
+				fmt.tprintf("Failed to initialize git repo: %v", start_err),
 			)
 			os.exit(1)
 		}

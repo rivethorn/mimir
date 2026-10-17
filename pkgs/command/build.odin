@@ -180,6 +180,7 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 		output,
 		release_mode,
 		debug_flag,
+		"-vet",
 	}
 	if config.is_file {
 		append(&command, "-file")
@@ -302,7 +303,13 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		os.exit(1)
 	}
 
-	target := resolve_build_target(pkg, project_dir, "mimir build", "build", false)
+	target := resolve_build_target(
+		pkg,
+		project_dir,
+		"mimir build",
+		"build",
+		false,
+	)
 	if target.is_default {
 		require_project(project_dir, "mimir build", "build")
 	}

@@ -26,7 +26,7 @@ OLS_FILE_CONTENT: string : `{
     "enable_hover": true,
     "enable_snippets": true,
     "enable_fake_methods": true,
-    "enable_inlay_hints_params": false
+    "enable_inlay_hints_params": false,
     "checker_args": "-debug -strict-style -vet -disallow-do"
 }`
 
@@ -37,7 +37,7 @@ OLS_LIB_CONTENT: string : `{
     "enable_hover": true,
     "enable_snippets": true,
     "enable_fake_methods": true,
-    "enable_inlay_hints_params": false
+    "enable_inlay_hints_params": false,
     "checker_args": "-debug -strict-style -vet -disallow-do"
 }`
 

@@ -36,8 +36,9 @@ parse_and_run :: proc() -> (code: int) {
 	defer free(parse_err)
 	if parse_err != nil {
 		reflags.print_error(&app_cli, parse_err)
-		return parse_err.reason == .Help_Requested ||
-		parse_err.reason == .Version_Requested ? 0 : 1
+		return(
+			parse_err.reason == .Help_Requested || parse_err.reason == .Version_Requested ? 0 : 1 \
+		)
 	}
 
 	if parsed.command.name == "mimir" {
@@ -90,8 +91,9 @@ parse_and_run :: proc() -> (code: int) {
 			// exit code of a program mimir ran).
 			e := handler_err.(reflags.Re_Error)
 			free(handler_err)
-			return e.reason == .None ? e.exit_code :
-				e.exit_code != 0 ? e.exit_code : 1
+			return(
+				e.reason == .None ? e.exit_code : e.exit_code != 0 ? e.exit_code : 1 \
+			)
 		}
 	}
 

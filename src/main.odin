@@ -38,7 +38,8 @@ run_debug :: proc() -> (code: int) {
 	// Bad frees (double frees, invalid frees) are collected instead of
 	// crashing, so one bug doesn't hide the rest of the report.
 	track: mem.Tracking_Allocator
-	track.bad_free_callback = mem.tracking_allocator_bad_free_callback_add_to_array
+	track.bad_free_callback =
+		mem.tracking_allocator_bad_free_callback_add_to_array
 
 	mem.tracking_allocator_init(&track, context.allocator)
 	context.allocator = mem.tracking_allocator(&track)
@@ -84,7 +85,10 @@ report_leaks :: proc(track: ^mem.Tracking_Allocator) {
 		leaked_bytes += entry.size
 		loc := entry.location
 		key := fmt.tprintf("%s, %s:%d", loc.procedure, loc.file_path, loc.line)
-		sites[key] = Site_Stats{sites[key].count + 1, sites[key].bytes + entry.size}
+		sites[key] = Site_Stats {
+			sites[key].count + 1,
+			sites[key].bytes + entry.size,
+		}
 	}
 
 	fmt.eprintfln(

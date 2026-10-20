@@ -41,7 +41,10 @@ handle_list :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 	binaries, err := get_apps_names(bin_dir)
 	if err != nil {
-		return reflags.command_fail("mimir list", "Failed to read binaries path")
+		return reflags.command_fail(
+			"mimir list",
+			"Failed to read binaries path",
+		)
 	}
 	// The names and their strings were heap allocations in get_apps_names.
 	defer {

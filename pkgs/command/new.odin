@@ -26,7 +26,11 @@ handle_new :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 	if strings.contains(project_name, " ") {
 		name_arr := strings.split(project_name, " ", context.temp_allocator)
-		clean_name, cn_err := strings.join(name_arr, "-", context.temp_allocator)
+		clean_name, cn_err := strings.join(
+			name_arr,
+			"-",
+			context.temp_allocator,
+		)
 		if cn_err != nil {
 			return reflags.command_fail(
 				"mimir new",
@@ -70,10 +74,8 @@ handle_new :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	if is_lib {
 		lib_path := fmt.tprintf("%s/%s.odin", project_dir, project_name)
 		lib_content := fmt.tprintf(LIB_FILE_FMT, pkg_name)
-		if err := os.write_entire_file(
-			lib_path,
-			transmute([]u8)lib_content,
-		); err != nil {
+		if err := os.write_entire_file(lib_path, transmute([]u8)lib_content);
+		   err != nil {
 			return reflags.command_fail(
 				"mimir new",
 				fmt.tprintf("Failed to write %s.odin: %v", project_name, err),
@@ -248,7 +250,10 @@ handle_new :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		if git_state.exit_code != 0 {
 			return reflags.command_fail(
 				"mimir new",
-				fmt.tprintf("`git init` failed with exit code: %d", git_state.exit_code),
+				fmt.tprintf(
+					"`git init` failed with exit code: %d",
+					git_state.exit_code,
+				),
 				git_state.exit_code,
 			)
 		}

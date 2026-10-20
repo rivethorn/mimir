@@ -36,7 +36,7 @@ handle_install :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		}
 	}
 
-	if repo == "." /* local project */ {
+	if repo == "."  /* local project */{
 		project_dir, err := os.get_working_directory(context.allocator)
 		if err != nil {
 			return reflags.command_fail(
@@ -52,7 +52,10 @@ handle_install :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		}
 
 		project_name := filepath.base(project_dir)
-		pkg_path, _ := filepath.join({bin_dir, project_name}, context.allocator)
+		pkg_path, _ := filepath.join(
+			{bin_dir, project_name},
+			context.allocator,
+		)
 		defer delete_string(pkg_path)
 
 		if os.exists(pkg_path) {
@@ -73,7 +76,8 @@ handle_install :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		)
 		defer delete_string(output_bin)
 
-		if _, build_fail := handle_build_cwd(args, project_dir); build_fail != nil {
+		if _, build_fail := handle_build_cwd(args, project_dir);
+		   build_fail != nil {
 			return build_fail
 		}
 
@@ -88,7 +92,7 @@ handle_install :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		// Keep a private copy for the message: file paths freed above are
 		// slices of other allocations.
 		name = strings.clone(project_name, context.allocator)
-	} else /* remote project */ {
+	} else  /* remote project */{
 		tmp := util.get_tmp_dir()
 		defer delete_string(tmp)
 
@@ -135,7 +139,8 @@ handle_install :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		)
 		defer delete_string(output_bin)
 
-		if _, build_fail := handle_build_cwd(args, project_dir); build_fail != nil {
+		if _, build_fail := handle_build_cwd(args, project_dir);
+		   build_fail != nil {
 			return build_fail
 		}
 

@@ -8,29 +8,29 @@ import "core:strings"
 // ANSI Color Helpers - Simple string constants for styled output
 // ============================================================================
 
-color_reset :: "\x1b[0m"
-color_bold :: "\x1b[1m"
-color_dim :: "\x1b[2m"
+color_reset     :: "\x1b[0m"
+color_bold      :: "\x1b[1m"
+color_dim       :: "\x1b[2m"
 color_underline :: "\x1b[4m"
 
 // Foreground colors (SGR codes)
-color_red :: "\x1b[31m"
-color_green :: "\x1b[32m"
-color_yellow :: "\x1b[33m"
-color_blue :: "\x1b[34m"
-color_magenta :: "\x1b[35m"
-color_cyan :: "\x1b[36m"
-color_white :: "\x1b[37m"
-color_bright_red :: "\x1b[91m"
-color_bright_green :: "\x1b[92m"
-color_bright_yellow :: "\x1b[93m"
-color_bright_blue :: "\x1b[94m"
+color_red            :: "\x1b[31m"
+color_green          :: "\x1b[32m"
+color_yellow         :: "\x1b[33m"
+color_blue           :: "\x1b[34m"
+color_magenta        :: "\x1b[35m"
+color_cyan           :: "\x1b[36m"
+color_white          :: "\x1b[37m"
+color_bright_red     :: "\x1b[91m"
+color_bright_green   :: "\x1b[92m"
+color_bright_yellow  :: "\x1b[93m"
+color_bright_blue    :: "\x1b[94m"
 color_bright_magenta :: "\x1b[95m"
-color_bright_cyan :: "\x1b[96m"
-color_bright_white :: "\x1b[97m"
+color_bright_cyan    :: "\x1b[96m"
+color_bright_white   :: "\x1b[97m"
 
 // Background colors
-color_bg_red :: "\x1b[41m"
+color_bg_red   :: "\x1b[41m"
 color_bg_green :: "\x1b[42m"
 
 // ============================================================================
@@ -133,13 +133,17 @@ Parsed_Args :: struct {
 	// owned strings are values the parser built itself (typed values,
 	// joined repetitions): destroy frees them. All other values borrow
 	// from the raw argument strings the caller passed to parse.
-	owned: []string,
+	owned:       []string,
 }
 
 // Get a typed value from parsed args
 // get_string returns the value of `name` as a string, or default_val if it
 // was not provided.
-get_string :: proc(args: Parsed_Args, name: string, default_val: string = "") -> string {
+get_string :: proc(
+	args: Parsed_Args,
+	name: string,
+	default_val: string = "",
+) -> string {
 	if val, ok := args.values[name]; ok {
 		return val
 	}
@@ -159,7 +163,11 @@ get_int :: proc(args: Parsed_Args, name: string, default_val: int = 0) -> int {
 
 // get_bool returns the value of `name` parsed as a bool ("true"/"1" are
 // true), or default_val if it was not provided.
-get_bool :: proc(args: Parsed_Args, name: string, default_val: bool = false) -> bool {
+get_bool :: proc(
+	args: Parsed_Args,
+	name: string,
+	default_val: bool = false,
+) -> bool {
 	if val, ok := args.values[name]; ok {
 		if b, parsed_ok := strconv.parse_bool(val); parsed_ok {
 			return b
@@ -173,7 +181,11 @@ get_bool :: proc(args: Parsed_Args, name: string, default_val: bool = false) -> 
 
 // get_float returns the value of `name` parsed as an f64, or default_val if
 // it was not provided or cannot be parsed.
-get_float :: proc(args: Parsed_Args, name: string, default_val: f64 = 0.0) -> f64 {
+get_float :: proc(
+	args: Parsed_Args,
+	name: string,
+	default_val: f64 = 0.0,
+) -> f64 {
 	if val, ok := args.values[name]; ok {
 		if f, parsed_ok := strconv.parse_f64(val); parsed_ok {
 			return f

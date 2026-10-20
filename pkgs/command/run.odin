@@ -47,7 +47,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		extra := make([dynamic]string, 0, len(run_args) + 1, context.allocator)
 		append(&extra, pkg)
 		append(&extra, ..run_args)
-	delete(run_args)
+		delete(run_args)
 		run_args = extra[:]
 	}
 	defer delete(run_args)
@@ -137,10 +137,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	if proc_state.exit_code != 0 {
 		return reflags.command_fail(
 			"mimir run",
-			fmt.tprintf(
-				"Project exited with code: %d",
-				proc_state.exit_code,
-			),
+			fmt.tprintf("Project exited with code: %d", proc_state.exit_code),
 			proc_state.exit_code,
 		)
 	}

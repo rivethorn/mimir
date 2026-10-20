@@ -32,7 +32,12 @@ Build_Config :: struct {
 
 
 @(private = "file")
-get_collections :: proc(cwd: string) -> (result: [dynamic]string, fail: ^reflags.Error) {
+get_collections :: proc(
+	cwd: string,
+) -> (
+	result: [dynamic]string,
+	fail: ^reflags.Error,
+) {
 	config: Ols
 
 	// Outside a project there is no ols.json: build with no collections.
@@ -72,7 +77,13 @@ get_collections :: proc(cwd: string) -> (result: [dynamic]string, fail: ^reflags
 }
 
 @(private = "file")
-start_build :: proc(config: ^Build_Config, cwd: string) -> (Build_Error, ^reflags.Error) {
+start_build :: proc(
+	config: ^Build_Config,
+	cwd: string,
+) -> (
+	Build_Error,
+	^reflags.Error,
+) {
 	if !util.command_exists("odin") {
 		return .Command_Not_Found, nil
 	}
@@ -204,10 +215,7 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> (Build_Error, ^reflag
 	if exec_err != nil {
 		return .Spawn_Failure, reflags.command_fail(
 			"mimir build",
-			fmt.tprintf(
-				"Failed to spawn the Odin compiler: %v",
-				exec_err,
-			),
+			fmt.tprintf("Failed to spawn the Odin compiler: %v", exec_err),
 		)
 	}
 
@@ -322,7 +330,8 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		}
 	}
 	if target.is_default {
-		if fail := require_project(project_dir, "mimir build", "build"); fail != nil {
+		if fail := require_project(project_dir, "mimir build", "build");
+		   fail != nil {
 			return fail
 		}
 	}
@@ -408,7 +417,10 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 handle_build_cwd :: proc(
 	args: reflags.Parsed_Args,
 	cwd: string,
-) -> (rebuild: bool, fail: ^reflags.Error) {
+) -> (
+	rebuild: bool,
+	fail: ^reflags.Error,
+) {
 	project_dir := cwd
 
 	release :=
@@ -438,7 +450,11 @@ handle_build_cwd :: proc(
 		}
 	}
 	if target.is_default {
-		if guard_fail := require_project(project_dir, cmd_label, args.command.name); guard_fail != nil {
+		if guard_fail := require_project(
+			project_dir,
+			cmd_label,
+			args.command.name,
+		); guard_fail != nil {
 			return false, guard_fail
 		}
 	}

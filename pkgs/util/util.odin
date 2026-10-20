@@ -107,7 +107,8 @@ clones during install). The result is a fresh heap allocation: free it
 with delete_string when the caller is done with it.
 */
 get_tmp_dir :: #force_inline proc() -> string {
-	if sys_tmp, tmp_err := os.temp_dir(context.temp_allocator); tmp_err == nil {
+	if sys_tmp, tmp_err := os.temp_dir(context.temp_allocator);
+	   tmp_err == nil {
 		path, _ := filepath.join({sys_tmp, "mimir"}, context.allocator)
 		return path
 	}

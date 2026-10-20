@@ -10,13 +10,13 @@ import "pkgs:util"
 
 Build_Target :: struct {
 	// src_path is handed to `odin build`, relative to cwd when possible.
-	src_path: string,
+	src_path:   string,
 	// exe_base names the binary: the package directory's name, the file
 	// stem for a single file, or the project directory's name for the
 	// default src/ build.
-	exe_base: string,
+	exe_base:   string,
 	// is_file marks a single-file target, which odin builds with -file.
-	is_file: bool,
+	is_file:    bool,
 	// is_default reports the default src/ build with no package argument
 	// given or (for run) an unresolvable one. Naming src/ outright still
 	// consumes the argument, so it comes back false.
@@ -37,13 +37,17 @@ Build_Target :: struct {
 resolve_build_target :: proc(
 	pkg_arg, cwd, cmd_label, hint_name: string,
 	fallback_default: bool,
-) -> (Build_Target, ^reflags.Error) {
+) -> (
+	Build_Target,
+	^reflags.Error,
+) {
 	if pkg_arg == "" {
 		return Build_Target {
-			src_path = "src",
-			exe_base = filepath.base(cwd),
-			is_default = true,
-		}, nil
+				src_path = "src",
+				exe_base = filepath.base(cwd),
+				is_default = true,
+			},
+			nil
 	}
 
 	rel := strings.trim_right(pkg_arg, "/\\")
@@ -74,15 +78,13 @@ resolve_build_target :: proc(
 			if kind == .Other_File {
 				if fallback_default {
 					return Build_Target {
-						src_path = "src",
-						exe_base = filepath.base(cwd),
-						is_default = true,
-					}, nil
+							src_path = "src",
+							exe_base = filepath.base(cwd),
+							is_default = true,
+						},
+						nil
 				}
-				return {}, reflags.command_fail(
-					cmd_label,
-					fmt.tprintf("'%s' is not an Odin file", pkg_arg),
-				)
+				return {}, reflags.command_fail(cmd_label, fmt.tprintf("'%s' is not an Odin file", pkg_arg))
 			}
 		}
 	}
@@ -90,48 +92,38 @@ resolve_build_target :: proc(
 	if pkg_path == "" {
 		if fallback_default {
 			return Build_Target {
-				src_path = "src",
-				exe_base = filepath.base(cwd),
-				is_default = true,
-			}, nil
+					src_path = "src",
+					exe_base = filepath.base(cwd),
+					is_default = true,
+				},
+				nil
 		}
-		return {}, reflags.command_fail(
-			cmd_label,
-			fmt.tprintf("Unknown package '%s'", pkg_arg),
-		)
+		return {}, reflags.command_fail(cmd_label, fmt.tprintf("Unknown package '%s'", pkg_arg))
 	}
 
 	if is_file {
 		data, data_err := os.read_entire_file(pkg_path, context.temp_allocator)
 		if data_err != nil || !odin_src_has_main(string(data)) {
-			return {}, reflags.command_fail(
-				cmd_label,
-				fmt.tprintf("File '%s' has no main procedure", rel),
-			)
+			return {}, reflags.command_fail(cmd_label, fmt.tprintf("File '%s' has no main procedure", rel))
 		}
 		return Build_Target {
-			src_path = strings.clone(src_form, context.allocator),
-			exe_base = strings.clone(
-				filepath.stem(pkg_path),
-				context.allocator,
-			),
-			is_file = true,
-			is_default = false,
-		}, nil
+				src_path = strings.clone(src_form, context.allocator),
+				exe_base = strings.clone(
+					filepath.stem(pkg_path),
+					context.allocator,
+				),
+				is_file = true,
+				is_default = false,
+			},
+			nil
 	}
 
 	has_odin, has_main := scan_pkg_dir(pkg_path)
 	if !has_odin {
-		return {}, reflags.command_fail(
-			cmd_label,
-			fmt.tprintf("Package '%s' contains no Odin files", rel),
-		)
+		return {}, reflags.command_fail(cmd_label, fmt.tprintf("Package '%s' contains no Odin files", rel))
 	}
 	if !has_main {
-		return {}, reflags.command_fail(
-			cmd_label,
-			fmt.tprintf("Package '%s' has no main procedure", rel),
-		)
+		return {}, reflags.command_fail(cmd_label, fmt.tprintf("Package '%s' has no main procedure", rel))
 	}
 
 	// Naming src/ outright is just the default build: same sources, same
@@ -144,17 +136,25 @@ resolve_build_target :: proc(
 		// Same ownership contract as the other non-default targets: heap
 		// clones the caller frees.
 		return Build_Target {
-			src_path = strings.clone("src", context.allocator),
-			exe_base = strings.clone(filepath.base(cwd), context.allocator),
-			is_default = false,
-		}, nil
+				src_path = strings.clone("src", context.allocator),
+				exe_base = strings.clone(
+					filepath.base(cwd),
+					context.allocator,
+				),
+				is_default = false,
+			},
+			nil
 	}
 
 	return Build_Target {
-		src_path = strings.clone(src_form, context.allocator),
-		exe_base = strings.clone(filepath.base(pkg_path), context.allocator),
-		is_default = false,
-	}, nil
+			src_path = strings.clone(src_form, context.allocator),
+			exe_base = strings.clone(
+				filepath.base(pkg_path),
+				context.allocator,
+			),
+			is_default = false,
+		},
+		nil
 }
 
 // require_project exits with the standard guard error unless dir holds a
@@ -255,23 +255,34 @@ odin_src_has_main :: proc(src: string) -> bool {
 }
 
 is_ident_byte :: proc(c: byte) -> bool {
-	return (c >= 'a' && c <= 'z') ||
+	return(
+		(c >= 'a' && c <= 'z') ||
 		(c >= 'A' && c <= 'Z') ||
 		(c >= '0' && c <= '9') ||
-		c == '_'
+		c == '_' \
+	)
 }
 
 is_space_byte :: proc(c: byte) -> bool {
-	return c == ' ' ||
+	return(
+		c == ' ' ||
 		c == '\t' ||
 		c == '\n' ||
 		c == '\r' ||
 		c == '\v' ||
-		c == '\f'
+		c == '\f' \
+	)
 }
 
 // match_ident_at matches word at byte offset i with identifier boundaries.
-match_ident_at :: proc(s: string, i: int, word: string) -> (end: int, ok: bool) {
+match_ident_at :: proc(
+	s: string,
+	i: int,
+	word: string,
+) -> (
+	end: int,
+	ok: bool,
+) {
 	if i < 0 || i + len(word) > len(s) {
 		return 0, false
 	}
@@ -333,8 +344,8 @@ strip_odin_comments :: proc(
 					depth += 1
 					i += 1
 				} else if src[i] == '*' &&
-					i + 1 < len(src) &&
-					src[i + 1] == '/' {
+				   i + 1 < len(src) &&
+				   src[i + 1] == '/' {
 					depth -= 1
 					i += 1
 				}

@@ -84,9 +84,14 @@ parse_and_run :: proc() -> (code: int) {
 	if parsed.command.handler != nil {
 		handler_err := parsed.command.handler(parsed)
 		if handler_err != nil {
-			reflags.print_error(&app_cli, &handler_err.(reflags.Re_Error))
+			// Handlers print their own errors on the spot; the returned
+			// Error only decides the process exit code (Re_Error with
+			// reason .None carries a success-style exit code, e.g. the
+			// exit code of a program mimir ran).
+			e := handler_err.(reflags.Re_Error)
 			free(handler_err)
-			return 1
+			return e.reason == .None ? e.exit_code :
+				e.exit_code != 0 ? e.exit_code : 1
 		}
 	}
 

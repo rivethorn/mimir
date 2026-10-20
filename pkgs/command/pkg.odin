@@ -30,17 +30,20 @@ Build_Target :: struct {
 // A directory must hold .odin files; either form must declare a main
 // procedure. When fallback_default is set (mimir run), an argument that
 // resolves to nothing — or to a file odin can't build — instead yields the
-// default target so the caller can pass it to the program.
+// default target so the caller can pass it to the program. On failure the
+// error is returned (already printed) with a zero-valued target; otherwise
+// the target's src_path and exe_base are heap allocations the caller must
+// free.
 resolve_build_target :: proc(
 	pkg_arg, cwd, cmd_label, hint_name: string,
 	fallback_default: bool,
-) -> Build_Target {
+) -> (Build_Target, ^reflags.Error) {
 	if pkg_arg == "" {
 		return Build_Target {
 			src_path = "src",
 			exe_base = filepath.base(cwd),
 			is_default = true,
-		}
+		}, nil
 	}
 
 	rel := strings.trim_right(pkg_arg, "/\\")
@@ -74,14 +77,12 @@ resolve_build_target :: proc(
 						src_path = "src",
 						exe_base = filepath.base(cwd),
 						is_default = true,
-					}
+					}, nil
 				}
-				reflags.command_error(
+				return {}, reflags.command_fail(
 					cmd_label,
 					fmt.tprintf("'%s' is not an Odin file", pkg_arg),
 				)
-				reflags.error_hint(hint_name)
-				os.exit(1)
 			}
 		}
 	}
@@ -92,25 +93,21 @@ resolve_build_target :: proc(
 				src_path = "src",
 				exe_base = filepath.base(cwd),
 				is_default = true,
-			}
+			}, nil
 		}
-		reflags.command_error(
+		return {}, reflags.command_fail(
 			cmd_label,
 			fmt.tprintf("Unknown package '%s'", pkg_arg),
 		)
-		reflags.error_hint(hint_name)
-		os.exit(1)
 	}
 
 	if is_file {
 		data, data_err := os.read_entire_file(pkg_path, context.temp_allocator)
 		if data_err != nil || !odin_src_has_main(string(data)) {
-			reflags.command_error(
+			return {}, reflags.command_fail(
 				cmd_label,
 				fmt.tprintf("File '%s' has no main procedure", rel),
 			)
-			reflags.error_hint(hint_name)
-			os.exit(1)
 		}
 		return Build_Target {
 			src_path = strings.clone(src_form, context.allocator),
@@ -120,25 +117,21 @@ resolve_build_target :: proc(
 			),
 			is_file = true,
 			is_default = false,
-		}
+		}, nil
 	}
 
 	has_odin, has_main := scan_pkg_dir(pkg_path)
 	if !has_odin {
-		reflags.command_error(
+		return {}, reflags.command_fail(
 			cmd_label,
 			fmt.tprintf("Package '%s' contains no Odin files", rel),
 		)
-		reflags.error_hint(hint_name)
-		os.exit(1)
 	}
 	if !has_main {
-		reflags.command_error(
+		return {}, reflags.command_fail(
 			cmd_label,
 			fmt.tprintf("Package '%s' has no main procedure", rel),
 		)
-		reflags.error_hint(hint_name)
-		os.exit(1)
 	}
 
 	// Naming src/ outright is just the default build: same sources, same
@@ -152,27 +145,26 @@ resolve_build_target :: proc(
 			src_path = "src",
 			exe_base = filepath.base(cwd),
 			is_default = false,
-		}
+		}, nil
 	}
 
 	return Build_Target {
 		src_path = strings.clone(src_form, context.allocator),
 		exe_base = strings.clone(filepath.base(pkg_path), context.allocator),
 		is_default = false,
-	}
+	}, nil
 }
 
 // require_project exits with the standard guard error unless dir holds a
 // Mimir project. Used when falling back to the default src/ build.
-require_project :: proc(dir, cmd_label, hint_name: string) {
+require_project :: proc(dir, cmd_label, hint_name: string) -> ^reflags.Error {
 	if !util.is_odin_project_in(dir) {
-		reflags.command_error(
+		return reflags.command_fail(
 			cmd_label,
 			"Current directory does not contain a valid Odin project for Mimir to work with.",
 		)
-		reflags.error_hint(hint_name)
-		os.exit(1)
 	}
+	return nil
 }
 
 // Target_Kind classifies a candidate build source: a package directory, a

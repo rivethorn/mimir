@@ -16,23 +16,47 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
-		reflags.command_error(
+		return reflags.command_fail(
 			"mimir run",
 			"Failed to determine project directory",
 		)
-		os.exit(1)
 	}
+	defer delete_string(project_dir)
 
-	target := resolve_build_target(pkg, project_dir, "mimir run", "run", true)
+	target, target_fail := resolve_build_target(
+		pkg,
+		project_dir,
+		"mimir run",
+		"run",
+		true,
+	)
+	if target_fail != nil {
+		return target_fail
+	}
+	// resolve_build_target allocates its paths on the heap so the target
+	// can outlive temp resets; free it once this handler is done. Default
+	// targets hold literals/sub-slices, so only owned copies are freed.
+	defer {
+		if !target.is_default {
+			delete_string(target.src_path)
+			delete_string(target.exe_base)
+		}
+	}
 	if pkg != "" && target.is_default {
 		// Not a package directory: the argument belongs to the program.
 		extra := make([dynamic]string, 0, len(run_args) + 1, context.allocator)
 		append(&extra, pkg)
 		append(&extra, ..run_args)
+	delete(run_args)
 		run_args = extra[:]
 	}
+	defer delete(run_args)
+	defer free_all(context.temp_allocator)
 
-	rebuild := handle_build_cwd(args, project_dir)
+	rebuild, build_fail := handle_build_cwd(args, project_dir)
+	if build_fail != nil {
+		return build_fail
+	}
 
 	exe_extension := ""
 	when ODIN_OS == .Windows {
@@ -47,6 +71,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	)
 
 	command := make([dynamic]string)
+	defer delete(command)
 	append(&command, bin_path)
 	append(&command, ..run_args)
 
@@ -100,16 +125,25 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 	run_process, exec_err := os.process_start(run_command)
 	if exec_err != nil {
-		reflags.command_error(
+		return reflags.command_fail(
 			"mimir run",
 			fmt.tprintf("Failed to run project: %v", exec_err),
 		)
-		os.exit(1)
 	}
-
-	free_all(context.temp_allocator)
 
 	proc_state, _ := os.process_wait(run_process)
 
-	os.exit(proc_state.exit_code)
+	// The child's exit code becomes mimir's exit code.
+	if proc_state.exit_code != 0 {
+		return reflags.command_fail(
+			"mimir run",
+			fmt.tprintf(
+				"Project exited with code: %d",
+				proc_state.exit_code,
+			),
+			proc_state.exit_code,
+		)
+	}
+
+	return nil
 }

@@ -598,18 +598,21 @@ validate_parsed :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 // ============================================================================
 
 // make_error allocates an Error with the given reason, message, and
-// optional command/option context.
+// optional command/option context. exit_code seeds the Re_Error.exit_code
+// field handlers use to influence the process exit code.
 make_error :: proc(
 	reason: Error_Reason,
 	message: string,
 	cmd: ^Command = nil,
 	opt: string = "",
+	exit_code: int = 0,
 ) -> ^Re_Error {
 	err := new(Re_Error)
 	err.reason = reason
 	err.message = message
 	err.command = cmd
 	err.option = opt
+	err.exit_code = exit_code
 	return err
 }
 // ============================================================================

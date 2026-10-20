@@ -276,10 +276,11 @@ Error_Reason :: enum {
 // Error describes a parsing or validation failure (or a help/version
 // request). See make_error for constructing one.
 Re_Error :: struct {
-	reason:  Error_Reason,
-	message: string,
-	command: ^Command, // Command context where error occurred
-	option:  string, // Option name if applicable
+	reason:    Error_Reason,
+	message:   string,
+	command:   ^Command, // Command context where error occurred
+	option:    string, // Option name if applicable
+	exit_code: int, // Process exit code for handler errors; 0 = success
 }
 
 Error :: union {

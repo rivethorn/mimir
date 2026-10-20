@@ -643,6 +643,20 @@ command_error :: proc(prefix: string, msg: string) {
 	fmt.eprintfln("%s%s%s error:%s %s", s.bold, s.bright_red, prefix, s.reset, msg)
 }
 
+// command_fail prints "<prefix> error: <msg>" via command_error and returns
+// an Error for the handler to pass back, so the parser exits with
+// exit_code (1 unless overridden). Handlers print their own errors and
+// return them through this instead of calling os.exit, which would skip
+// deferred cleanup on the way out.
+command_fail :: proc(prefix: string, msg: string, exit_code: int = 1) -> ^Error {
+	command_error(prefix, msg)
+	re_err := make_error(.Parse_Error, msg, nil, "", exit_code)
+	err := new(Error)
+	err^ = re_err^
+	free(re_err)
+	return err
+}
+
 // error_hint prints the "Run '<cmd> -help' for usage." line (Odin style).
 error_hint :: proc(cmd: string) {
 	s := make_style(true)

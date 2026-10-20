@@ -72,13 +72,14 @@ report_leaks :: proc(track: ^mem.Tracking_Allocator) {
 	}
 
 	// Aggregate by "procedure at file:line" so one leaky call site inside
-	// a loop shows up as a single entry.
+	// a loop shows up as a single entry. The report's own bookkeeping rides
+	// on the temp allocator so it never shows up in the tracker.
 	leaked_bytes: int
 	Site_Stats :: struct {
 		count: int,
 		bytes: int,
 	}
-	sites := make(map[string]Site_Stats)
+	sites := make(map[string]Site_Stats, context.temp_allocator)
 	for _, entry in track.allocation_map {
 		leaked_bytes += entry.size
 		loc := entry.location
@@ -86,27 +87,18 @@ report_leaks :: proc(track: ^mem.Tracking_Allocator) {
 		sites[key] = Site_Stats{sites[key].count + 1, sites[key].bytes + entry.size}
 	}
 
-	// Format the entries first, then free the aggregation map itself so
-	// the report doesn't list its own bookkeeping.
-	lines := make([dynamic]string)
-	defer {
-		delete(lines)
-		delete(sites)
-	}
-	for key, stat in sites {
-		append(
-			&lines,
-			fmt.tprintf("  %s: %d allocation(s), %d bytes", key, stat.count, stat.bytes),
-		)
-	}
-
 	fmt.eprintfln(
 		"mimir [debug]: %d leaked allocation(s), %d bytes:",
 		len(track.allocation_map),
 		leaked_bytes,
 	)
-	for line in lines {
-		fmt.eprintln(line)
+	for key, stat in sites {
+		fmt.eprintfln(
+			"  %s: %d allocation(s), %d bytes",
+			key,
+			stat.count,
+			stat.bytes,
+		)
 	}
 }
 

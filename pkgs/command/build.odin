@@ -5,7 +5,7 @@ import "core:encoding/json"
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
-import "core:strings"
+
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
@@ -32,46 +32,49 @@ Build_Config :: struct {
 
 
 @(private = "file")
-get_collections :: proc(cwd: string) -> [dynamic]string {
+get_collections :: proc(cwd: string) -> (result: [dynamic]string, fail: ^reflags.Error) {
 	config: Ols
 
 	// Outside a project there is no ols.json: build with no collections.
 	if !os.exists("ols.json") {
-		return make([dynamic]string, 0, 4, context.temp_allocator)
+		return make([dynamic]string, 0, 4, context.temp_allocator), nil
 	}
 
 	config_file, err := os.read_entire_file("ols.json", context.temp_allocator)
 	if err != nil {
-		reflags.command_error(
+		return nil, reflags.command_fail(
 			"mimir build",
 			fmt.tprintf("Failed to read ols.json file: %v", err),
 		)
-		os.exit(1)
 	}
 
-	json_err := json.unmarshal(config_file, &config)
+	json_err := json.unmarshal(
+		config_file,
+		&config,
+		json.DEFAULT_SPECIFICATION,
+		context.temp_allocator,
+	)
 	if json_err != nil {
-		reflags.command_error(
+		return nil, reflags.command_fail(
 			"mimir build",
-			fmt.tprintf("Failed to parse ols.json: %v", err),
+			fmt.tprintf("Failed to parse ols.json: %v", json_err),
 		)
-		os.exit(1)
 	}
 
-	collections := make([dynamic]string, 0, 8, context.temp_allocator)
+	result = make([dynamic]string, 0, 8, context.temp_allocator)
 
 	for col in config.collections {
 		current := fmt.tprintf("-collection:%s=%s", col.name, col.path)
-		append(&collections, current)
+		append(&result, current)
 	}
 
-	return collections
+	return result, nil
 }
 
 @(private = "file")
-start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
+start_build :: proc(config: ^Build_Config, cwd: string) -> (Build_Error, ^reflags.Error) {
 	if !util.command_exists("odin") {
-		return .Command_Not_Found
+		return .Command_Not_Found, nil
 	}
 
 	output := fmt.tprintf("-out:%s", config.output)
@@ -85,7 +88,7 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 
 	if mk_err := os.make_directory(bin_dir); mk_err != nil {
 		if !os.exists(bin_dir) {
-			reflags.command_error(
+			return .None, reflags.command_fail(
 				"mimir build",
 				fmt.tprintf(
 					"Failed to create directory '%s': %v",
@@ -93,7 +96,6 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 					mk_err,
 				),
 			)
-			os.exit(1)
 		}
 	}
 
@@ -111,8 +113,10 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 		context.temp_allocator,
 	)
 
-	collections := get_collections(cwd)
-
+	collections, collections_fail := get_collections(cwd)
+	if collections_fail != nil {
+		return .None, collections_fail
+	}
 	first_time := !os.exists(bin_path)
 
 	if !config.silent {
@@ -198,31 +202,26 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 
 	build_process, exec_err := os.process_start(build_command)
 	if exec_err != nil {
-		return .Spawn_Failure
+		return .Spawn_Failure, reflags.command_fail(
+			"mimir build",
+			fmt.tprintf(
+				"Failed to spawn the Odin compiler: %v",
+				exec_err,
+			),
+		)
 	}
 
 	proc_state, _ := os.process_wait(build_process)
 
-	if !config.silent && proc_state.exit_code != 0 {
-		reflags.command_error(
+	if proc_state.exit_code != 0 {
+		return .Compilation_Failure, reflags.command_fail(
 			"mimir build",
 			fmt.tprintf(
 				"Compilation failed (exit code: %d)",
 				proc_state.exit_code,
 			),
+			proc_state.exit_code,
 		)
-		os.exit(proc_state.exit_code)
-	}
-
-	if config.silent && proc_state.exit_code != 0 {
-		reflags.command_error(
-			"mimir build",
-			fmt.tprintf(
-				"Compilation failed (exit code: %d)",
-				proc_state.exit_code,
-			),
-		)
-		os.exit(proc_state.exit_code)
 	}
 
 	if !config.silent {
@@ -239,7 +238,7 @@ start_build :: proc(config: ^Build_Config, cwd: string) -> Build_Error {
 		)
 	}
 
-	return .None
+	return .None, nil
 }
 
 @(private = "file")
@@ -296,22 +295,36 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
-		reflags.command_error(
+		return reflags.command_fail(
 			"mimir build",
 			"Failed to determine project directory",
 		)
-		os.exit(1)
 	}
+	defer delete_string(project_dir)
 
-	target := resolve_build_target(
+	target, target_fail := resolve_build_target(
 		pkg,
 		project_dir,
 		"mimir build",
 		"build",
 		false,
 	)
+	if target_fail != nil {
+		return target_fail
+	}
+	// resolve_build_target allocates its paths on the heap so the target
+	// can outlive temp resets; free it once this handler is done. Default
+	// targets hold literals/sub-slices, so only owned copies are freed.
+	defer {
+		if !target.is_default {
+			delete_string(target.src_path)
+			delete_string(target.exe_base)
+		}
+	}
 	if target.is_default {
-		require_project(project_dir, "mimir build", "build")
+		if fail := require_project(project_dir, "mimir build", "build"); fail != nil {
+			return fail
+		}
 	}
 
 	source_abs := target.src_path
@@ -341,6 +354,7 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			context.allocator,
 		)
 	}
+	defer delete_string(output)
 	if !silent && !needs_rebuild(source_abs, output) {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
@@ -358,7 +372,7 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
 	if mk_err := os.make_directory(bin_dir); mk_err != nil {
 		if !os.exists(bin_dir) {
-			reflags.command_error(
+			return reflags.command_fail(
 				"mimir build",
 				fmt.tprintf(
 					"Failed to create directory '%s': %v",
@@ -366,7 +380,6 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 					mk_err,
 				),
 			)
-			os.exit(1)
 		}
 	}
 
@@ -378,22 +391,24 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		silent   = silent,
 		is_file  = target.is_file,
 	}
-	build_err := start_build(&config, project_dir)
-	if build_err != nil {
-		reflags.command_error("mimir build", fmt.tprintf("%v", build_err))
-		os.exit(1)
+	build_err, build_fail := start_build(&config, project_dir)
+	if build_fail != nil {
+		return build_fail
+	}
+	if build_err != .None {
+		return reflags.command_fail(
+			"mimir build",
+			fmt.tprintf("%v", build_err),
+		)
 	}
 
-	free_all(context.temp_allocator)
 	return nil
 }
 
 handle_build_cwd :: proc(
 	args: reflags.Parsed_Args,
 	cwd: string,
-) -> (
-	rebuild: bool,
-) {
+) -> (rebuild: bool, fail: ^reflags.Error) {
 	project_dir := cwd
 
 	release :=
@@ -402,19 +417,30 @@ handle_build_cwd :: proc(
 		args.command.name == "install" ? false : reflags.get_bool(args, "silent")
 	pkg := reflags.get_string(args, "pkg")
 
-	cmd_label := strings.clone(
-		fmt.tprintf("mimir %s", args.command.name),
-		context.allocator,
-	)
-	target := resolve_build_target(
+	cmd_label := fmt.tprintf("mimir %s", args.command.name)
+	target, target_fail := resolve_build_target(
 		pkg,
 		project_dir,
 		cmd_label,
 		args.command.name,
 		args.command.name == "run",
 	)
+	if target_fail != nil {
+		return false, target_fail
+	}
+	// resolve_build_target allocates its paths on the heap so the target
+	// can outlive temp resets; free it once this handler is done. Default
+	// targets hold literals/sub-slices, so only owned copies are freed.
+	defer {
+		if !target.is_default {
+			delete_string(target.src_path)
+			delete_string(target.exe_base)
+		}
+	}
 	if target.is_default {
-		require_project(project_dir, cmd_label, args.command.name)
+		if guard_fail := require_project(project_dir, cmd_label, args.command.name); guard_fail != nil {
+			return false, guard_fail
+		}
 	}
 
 	source_abs := target.src_path
@@ -444,6 +470,7 @@ handle_build_cwd :: proc(
 			context.allocator,
 		)
 	}
+	defer delete_string(output)
 
 	if !needs_rebuild(source_abs, output) {
 		fmt.println(
@@ -456,13 +483,13 @@ handle_build_cwd :: proc(
 			cli.color_ansi(ansi.RESET),
 			sep = "",
 		)
-		return false
+		return false, nil
 	}
 
 	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
 	if mk_err := os.make_directory(bin_dir); mk_err != nil {
 		if !os.exists(bin_dir) {
-			reflags.command_error(
+			return false, reflags.command_fail(
 				"mimir build",
 				fmt.tprintf(
 					"Failed to create directory '%s': %v",
@@ -470,7 +497,6 @@ handle_build_cwd :: proc(
 					mk_err,
 				),
 			)
-			os.exit(1)
 		}
 	}
 
@@ -483,12 +509,16 @@ handle_build_cwd :: proc(
 		is_file  = target.is_file,
 	}
 
-	build_err := start_build(&config, cwd)
-	if build_err != nil {
-		reflags.command_error("mimir build", fmt.tprintf("%v", build_err))
-		os.exit(1)
+	build_err, build_fail := start_build(&config, cwd)
+	if build_fail != nil {
+		return false, build_fail
+	}
+	if build_err != .None {
+		return false, reflags.command_fail(
+			"mimir build",
+			fmt.tprintf("%v", build_err),
+		)
 	}
 
-	free_all(context.temp_allocator)
-	return true
+	return true, nil
 }

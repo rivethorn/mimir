@@ -67,6 +67,10 @@ odin build src -collection:pkgs=pkgs -o:speed
 
 Then put the `mimir` binary somewhere on your `PATH`. Done.
 
+Hackers: `./build.sh --debug` produces `bin/mimir-dbg` with memory tracking
+in `-debug` builds — a leak report (grouped by call site, plus bad frees)
+describes what's still allocated when the command finishes.
+
 ---
 
 ## The layout

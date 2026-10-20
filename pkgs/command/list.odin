@@ -37,13 +37,19 @@ get_apps_names :: proc(dir_path: string) -> ([dynamic]string, os.Error) {
 
 handle_list :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	bin_dir := util.get_mimir_bin_dir_path()
+	defer delete_string(bin_dir)
 
 	binaries, err := get_apps_names(bin_dir)
 	if err != nil {
-		reflags.command_error("mimir list", "Failed to read binaries path")
-		os.exit(1)
+		return reflags.command_fail("mimir list", "Failed to read binaries path")
 	}
-	defer delete(binaries)
+	// The names and their strings were heap allocations in get_apps_names.
+	defer {
+		for name in binaries {
+			delete_string(name)
+		}
+		delete(binaries)
+	}
 
 	if len(binaries) == 0 {
 		fmt.printfln(
@@ -52,7 +58,7 @@ handle_list :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 			cli.color_ansi(ansi.RESET),
 		)
-		os.exit(0)
+		return nil
 	}
 
 	fmt.printfln(
@@ -78,8 +84,6 @@ handle_list :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			)
 		}
 	}
-
-	free_all(context.temp_allocator)
 
 	return nil
 }

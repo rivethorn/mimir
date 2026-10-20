@@ -12,18 +12,17 @@ handle_uninstall :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	pkg_name := reflags.get_string(args, "pkg")
 	dry_run := reflags.get_bool(args, "dry-run")
 	bin_dir := util.get_mimir_bin_dir_path()
+	defer delete_string(bin_dir)
 	pkg_path, _ := filepath.join({bin_dir, pkg_name}, context.temp_allocator)
 
 	if !os.exists(pkg_path) {
-		reflags.command_error(
+		return reflags.command_fail(
 			"mimir uninstall",
 			fmt.tprintf(
 				"Package '%s' is not installed on your system",
 				pkg_name,
 			),
 		)
-		reflags.error_hint("uninstall")
-		os.exit(1)
 	}
 
 	if dry_run {
@@ -36,7 +35,7 @@ handle_uninstall :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			pkg_path,
 			cli.color_ansi(ansi.RESET),
 		)
-		os.exit(0)
+		return nil
 	}
 
 	os.remove(pkg_path)
@@ -51,6 +50,5 @@ handle_uninstall :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		cli.color_ansi(ansi.RESET),
 	)
 
-	free_all(context.temp_allocator)
 	return nil
 }

@@ -12,11 +12,10 @@ handle_clean :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 	project_dir, err := os.get_working_directory(context.temp_allocator)
 	if err != nil {
-		reflags.command_error(
+		return reflags.command_fail(
 			"mimir clean",
 			"Failed to determine project directory",
 		)
-		os.exit(1)
 	}
 
 	bin_dir, _ := filepath.join({project_dir, "bin"}, context.temp_allocator)
@@ -34,7 +33,7 @@ handle_clean :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			cli.color_ansi(ansi.FG_BRIGHT_CYAN),
 			cli.color_ansi(ansi.RESET),
 		)
-		os.exit(0)
+		return nil
 	}
 
 	if dry_run {
@@ -61,7 +60,7 @@ handle_clean :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 				cli.color_ansi(ansi.RESET),
 			)
 		}
-		os.exit(0)
+		return nil
 	}
 
 	os.remove_all(bin_dir)
@@ -77,6 +76,5 @@ handle_clean :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		sep = "",
 	)
 
-	free_all(context.temp_allocator)
 	return nil
 }

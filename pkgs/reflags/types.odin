@@ -212,6 +212,47 @@ destroy :: proc(args: Parsed_Args) {
 	delete(args.positionals)
 }
 
+// destroy_cli frees the dynamic arrays owned by the CLI's command tree
+// (notes, options, arguments, subcommands) and the heap-allocated root
+// command. Call it when the CLI is no longer needed; every call to make_cli
+// should be paired with one.
+destroy_cli :: proc(cli: ^CLI) {
+	if cli.root_cmd == nil {
+		return
+	}
+	destroy_command(cli.root_cmd)
+	free(cli.root_cmd)
+	cli.root_cmd = nil
+}
+
+// destroy_command frees a Command's dynamic arrays and recurses into its
+// subcommands. Subcommands are visited before their parent array is deleted
+// since the child pointers live inside the parent's allocation.
+destroy_command :: proc(cmd: ^Command) {
+	for i in 0 ..< len(cmd.options) {
+		delete(cmd.options[i].notes)
+		delete_enum_info(cmd.options[i].type_info)
+	}
+	delete(cmd.options)
+	for i in 0 ..< len(cmd.arguments) {
+		delete(cmd.arguments[i].notes)
+		delete_enum_info(cmd.arguments[i].type_info)
+	}
+	delete(cmd.arguments)
+	for i in 0 ..< len(cmd.subcommands) {
+		destroy_command(&cmd.subcommands[i])
+	}
+	delete(cmd.subcommands)
+	delete(cmd.notes)
+}
+
+// delete_enum_info frees the enum values backing an Arg_Type_Info, if any.
+delete_enum_info :: proc(info: Arg_Type_Info) {
+	if info.kind == .Enum {
+		delete(info.enum_values)
+	}
+}
+
 // ============================================================================
 // Error Types
 // ============================================================================

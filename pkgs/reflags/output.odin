@@ -569,7 +569,12 @@ type_display_name :: proc(t: Arg_Type_Info) -> string {
 	case .Path:
 		return "PATH"
 	case .Enum:
-		return fmt.tprintf("%s%s%s", "{", strings.join(t.enum_values, "|", context.allocator), "}")
+		return fmt.tprintf(
+			"%s%s%s",
+			"{",
+			strings.join(t.enum_values, "|", context.temp_allocator),
+			"}",
+		)
 	case .Custom:
 		return "VALUE"
 	}

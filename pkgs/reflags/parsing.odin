@@ -72,6 +72,7 @@ parse :: proc(cli: ^CLI, args: []string, strict: bool = true) -> (Parsed_Args, ^
 	parsed.command = ctx.current_cmd
 	parsed.values = ctx.values
 	parsed.positionals = ctx.positionals[:]
+	delete(ctx.seen_options)
 
 	return parsed, nil
 }

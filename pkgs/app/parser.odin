@@ -29,6 +29,7 @@ import "pkgs:util"
 parse_and_run :: proc() -> (code: int) {
 	app_cli := build_cli()
 	app_cli.style = .Odin
+	defer reflags.destroy_cli(&app_cli)
 
 	parsed, parse_err := reflags.parse(&app_cli, os.args[1:])
 	defer reflags.destroy(parsed)

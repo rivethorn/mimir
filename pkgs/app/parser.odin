@@ -22,36 +22,37 @@ import "core:os"
 import "pkgs:reflags"
 import "pkgs:util"
 
-// parse parses os.args, validates, runs the "not an Odin project" guard, and
-// invokes the matched command's handler. Exits the process on usage errors,
-// help/version requests, or project-command guard failures.
-parse_and_run :: proc() {
+// parse_and_run parses os.args, validates, runs the "not an Odin project"
+// guard, and invokes the matched command's handler. Returns the process
+// exit code: 0 on success (including help/version requests), 1 on usage
+// errors, guard failures, or handler errors.
+parse_and_run :: proc() -> (code: int) {
 	app_cli := build_cli()
 	app_cli.style = .Odin
 
 	parsed, parse_err := reflags.parse(&app_cli, os.args[1:])
 	defer reflags.destroy(parsed)
+	defer free(parse_err)
 	if parse_err != nil {
 		reflags.print_error(&app_cli, parse_err)
-		os.exit(
-			parse_err.reason == .Help_Requested || parse_err.reason == .Version_Requested ? 0 : 1,
-		)
+		return parse_err.reason == .Help_Requested ||
+		parse_err.reason == .Version_Requested ? 0 : 1
 	}
 
 	if parsed.command.name == "mimir" {
 		// No subcommand given.
 		reflags.print_help(&app_cli, os.stdout)
-		os.exit(1)
+		return 1
 	}
 
 	if parsed.command.name == "version" {
 		fmt.println("Mimir version", VERSION)
-		os.exit(0)
+		return 0
 	}
 
 	if parsed.command.name == "help" {
 		reflags.print_help(&app_cli, os.stdout)
-		os.exit(0)
+		return 0
 	}
 
 	cmd_name := parsed.command.name
@@ -67,14 +68,14 @@ parse_and_run :: proc() {
 				"Current directory does not contain a valid Odin project for Mimir to work with.",
 			)
 			reflags.error_hint(cmd_name)
-			os.exit(1)
+			return 1
 		}
 	}
 
 	if parsed.command.name == "install" {
 		repo := reflags.get_string(parsed, "repo")
-		if repo != "" {
-			validate_url(&app_cli, repo)
+		if repo != "" && !validate_url(&app_cli, repo) {
+			return 1
 		}
 	}
 
@@ -83,7 +84,10 @@ parse_and_run :: proc() {
 		handler_err := parsed.command.handler(parsed)
 		if handler_err != nil {
 			reflags.print_error(&app_cli, &handler_err.(reflags.Re_Error))
-			os.exit(1)
+			free(handler_err)
+			return 1
 		}
 	}
+
+	return 0
 }

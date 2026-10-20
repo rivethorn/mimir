@@ -1,7 +1,6 @@
 package app
 
 import "core:fmt"
-import "core:os"
 import "core:strings"
 import "pkgs:reflags"
 
@@ -17,10 +16,11 @@ is_project_command :: proc(cmd_name: string) -> bool {
 }
 
 // validate_url enforces the old "site/owner/repo" URL rules: it must contain
-// a '/', must not end in ".git", and must not contain '@'.
-validate_url :: proc(app_cli: ^reflags.CLI, url: string) {
+// a '/', must not end in ".git", and must not contain '@'. Prints the error
+// itself and reports whether the URL passed.
+validate_url :: proc(app_cli: ^reflags.CLI, url: string) -> bool {
 	if url == "." {
-		return
+		return true
 	}
 	arr, _ := strings.split(url, "/", context.temp_allocator)
 	if !strings.contains_rune(url, '/') ||
@@ -34,6 +34,8 @@ validate_url :: proc(app_cli: ^reflags.CLI, url: string) {
 			),
 		)
 		reflags.print_error(app_cli, err)
-		os.exit(1)
+		free(err)
+		return false
 	}
+	return true
 }

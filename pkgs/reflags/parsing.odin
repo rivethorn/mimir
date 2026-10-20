@@ -17,10 +17,31 @@ Parse_Ctx :: struct {
 	args:             []string,
 	values:           map[string]string,
 	positionals:      [dynamic]string,
+	owned:            [dynamic]string, // Fresh strings stored into `values`
 	seen_options:     map[string]bool,
 	seen_positionals: int,
 	strict:           bool,
 	style:            Parsing_Style,
+}
+
+// value_copy turns `val` into parse-owned memory: a heap clone recorded in
+// the context, freed when the Parsed_Args is destroyed. Use it whenever a
+// stored value is newly built (typed values, joined repetitions); values
+// that just borrow from raw args can be stored directly.
+@(private = "file")
+value_copy :: proc(ctx: ^Parse_Ctx, val: string) -> string {
+	owned := strings.clone(val, context.allocator)
+	append(&ctx.owned, owned)
+	return owned
+}
+
+// discard_ctx_owned frees the parse-owned value strings of a failed parse.
+@(private = "file")
+discard_ctx_owned :: proc(ctx: ^Parse_Ctx) {
+	for val in ctx.owned {
+		delete_string(val)
+	}
+	delete(ctx.owned)
 }
 
 // ============================================================================
@@ -49,6 +70,7 @@ parse :: proc(cli: ^CLI, args: []string, strict: bool = true) -> (Parsed_Args, ^
 		delete(ctx.values)
 		delete(ctx.positionals)
 		delete(ctx.seen_options)
+		discard_ctx_owned(&ctx)
 		return Parsed_Args{}, err
 	}
 
@@ -57,6 +79,7 @@ parse :: proc(cli: ^CLI, args: []string, strict: bool = true) -> (Parsed_Args, ^
 		delete(ctx.values)
 		delete(ctx.positionals)
 		delete(ctx.seen_options)
+		discard_ctx_owned(&ctx)
 		return Parsed_Args{}, err
 	}
 
@@ -65,6 +88,7 @@ parse :: proc(cli: ^CLI, args: []string, strict: bool = true) -> (Parsed_Args, ^
 		delete(ctx.values)
 		delete(ctx.positionals)
 		delete(ctx.seen_options)
+		discard_ctx_owned(&ctx)
 		return Parsed_Args{}, err
 	}
 
@@ -72,6 +96,7 @@ parse :: proc(cli: ^CLI, args: []string, strict: bool = true) -> (Parsed_Args, ^
 	parsed.command = ctx.current_cmd
 	parsed.values = ctx.values
 	parsed.positionals = ctx.positionals[:]
+	parsed.owned = ctx.owned[:]
 	delete(ctx.seen_options)
 
 	return parsed, nil
@@ -264,15 +289,18 @@ parse_long_option :: proc(ctx: ^Parse_Ctx, arg: string, options: map[string]^Opt
 				name,
 			)
 		}
-		parsed_val, err := parse_value(value, opt.type_info)
+		parsed_val, err := parse_value(ctx, value, opt.type_info)
 		if err != nil {
 			return err
 		}
 		if opt.multiple {
 			existing := ctx.values[name]
 			if existing != "" {
-				// Join existing and new with comma separator
-				ctx.values[name] = strings.concatenate({existing, ",", parsed_val})
+				joined := strings.concatenate(
+					{existing, ",", parsed_val},
+					context.temp_allocator,
+				)
+				ctx.values[name] = value_copy(ctx, joined)
 			} else {
 				ctx.values[name] = parsed_val
 			}
@@ -321,14 +349,18 @@ parse_short_options :: proc(
 				// Check if there's an = sign
 				if shorts[j + 1] == '=' {
 					value := shorts[j + 2:]
-					parsed_val, err := parse_value(value, opt.type_info)
+					parsed_val, err := parse_value(ctx, value, opt.type_info)
 					if err != nil {
 						return err
 					}
 					if opt.multiple {
 						existing := ctx.values[opt.name]
 						if existing != "" {
-							ctx.values[opt.name] = strings.concatenate({existing, ",", parsed_val})
+							joined := strings.concatenate(
+							{existing, ",", parsed_val},
+							context.temp_allocator,
+						)
+						ctx.values[opt.name] = value_copy(ctx, joined)
 						} else {
 							ctx.values[opt.name] = parsed_val
 						}
@@ -340,14 +372,18 @@ parse_short_options :: proc(
 				}
 				// Otherwise, rest is value
 				value := shorts[j + 1:]
-				parsed_val, err := parse_value(value, opt.type_info)
+				parsed_val, err := parse_value(ctx, value, opt.type_info)
 				if err != nil {
 					return err
 				}
 				if opt.multiple {
 					existing := ctx.values[opt.name]
 					if existing != "" {
-						ctx.values[opt.name] = strings.concatenate({existing, ",", parsed_val})
+						joined := strings.concatenate(
+							{existing, ",", parsed_val},
+							context.temp_allocator,
+						)
+						ctx.values[opt.name] = value_copy(ctx, joined)
 					} else {
 						ctx.values[opt.name] = parsed_val
 					}
@@ -368,14 +404,18 @@ parse_short_options :: proc(
 						opt.name,
 					)
 				}
-				parsed_val, err := parse_value(value, opt.type_info)
+				parsed_val, err := parse_value(ctx, value, opt.type_info)
 				if err != nil {
 					return err
 				}
 				if opt.multiple {
 					existing := ctx.values[opt.name]
 					if existing != "" {
-						ctx.values[opt.name] = strings.concatenate({existing, ",", parsed_val})
+						joined := strings.concatenate(
+							{existing, ",", parsed_val},
+							context.temp_allocator,
+						)
+						ctx.values[opt.name] = value_copy(ctx, joined)
 					} else {
 						ctx.values[opt.name] = parsed_val
 					}
@@ -432,7 +472,7 @@ parse_positional :: proc(
 
 	arg_def := &cmd.arguments[arg_def_index]
 
-	parsed_val, err := parse_value(arg, arg_def.type_info)
+	parsed_val, err := parse_value(ctx, arg, arg_def.type_info)
 	if err != nil {
 		return err
 	}
@@ -442,7 +482,11 @@ parse_positional :: proc(
 		key := arg_def.name
 		existing := ctx.values[key]
 		if existing != "" {
-			ctx.values[key] = strings.concatenate({existing, ",", parsed_val})
+			joined := strings.concatenate(
+				{existing, ",", parsed_val},
+				context.temp_allocator,
+			)
+			ctx.values[key] = value_copy(ctx, joined)
 		} else {
 			ctx.values[key] = parsed_val
 		}
@@ -462,7 +506,10 @@ parse_positional :: proc(
 
 // parse_value converts a raw string to the type described by type_info,
 // returning it as a normalized string or an Invalid_Value / Parse_Error.
-parse_value :: proc(value: string, type_info: Arg_Type_Info) -> (string, ^Re_Error) {
+// Fresh results (typed values, custom parses) are heap copies owned by the
+// parse context; borrowed results (strings, paths, enums) point into the
+// caller's raw value.
+parse_value :: proc(ctx: ^Parse_Ctx, value: string, type_info: Arg_Type_Info) -> (string, ^Re_Error) {
 	switch type_info.kind {
 	case .String:
 		return value, nil
@@ -471,13 +518,13 @@ parse_value :: proc(value: string, type_info: Arg_Type_Info) -> (string, ^Re_Err
 		if !ok {
 			return "", make_error(.Invalid_Value, fmt.tprintf("Invalid integer: %s", value))
 		}
-		return fmt.tprintf("%d", i), nil
+		return value_copy(ctx, fmt.tprintf("%d", i)), nil
 	case .Float:
 		f, ok := strconv.parse_f64(value)
 		if !ok {
 			return "", make_error(.Invalid_Value, fmt.tprintf("Invalid float: %s", value))
 		}
-		return fmt.tprintf("%g", f), nil
+		return value_copy(ctx, fmt.tprintf("%g", f)), nil
 	case .Bool:
 		b, ok := strconv.parse_bool(value)
 		if !ok {
@@ -514,16 +561,16 @@ parse_value :: proc(value: string, type_info: Arg_Type_Info) -> (string, ^Re_Err
 			if err != nil {
 				return "", err
 			}
-			// Convert any to string for storage
+			// Store the custom result as an owned copy, whatever it was.
 			switch v in val {
 			case string:
-				return v, nil
+				return value_copy(ctx, v), nil
 			case int:
-				return fmt.tprintf("%d", v), nil
+				return value_copy(ctx, fmt.tprintf("%d", v)), nil
 			case bool:
 				if v {return "true", nil}; return "false", nil
 			case f64:
-				return fmt.tprintf("%g", v), nil
+				return value_copy(ctx, fmt.tprintf("%g", v)), nil
 			}
 			return "", make_error(.Parse_Error, "Unhandled custom parse result type")
 		}
@@ -555,7 +602,7 @@ validate_parsed :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 			}
 			// Apply default value if present
 			if len(opt.default_str) > 0 {
-				val, err := parse_value(opt.default_str, opt.type_info)
+				val, err := parse_value(ctx, opt.default_str, opt.type_info)
 				if err != nil {
 					return make_error(
 						.Invalid_Value,
@@ -705,14 +752,18 @@ parse_options_and_args_odin :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 					name,
 				)
 			}
-			parsed_val, err := parse_value(value, opt.type_info)
+			parsed_val, err := parse_value(ctx, value, opt.type_info)
 			if err != nil {
 				return err
 			}
 			if opt.multiple {
 				existing := ctx.values[opt.name]
 				if existing != "" {
-					ctx.values[opt.name] = strings.concatenate({existing, ",", parsed_val})
+					joined := strings.concatenate(
+						{existing, ",", parsed_val},
+						context.temp_allocator,
+					)
+					ctx.values[opt.name] = value_copy(ctx, joined)
 				} else {
 					ctx.values[opt.name] = parsed_val
 				}

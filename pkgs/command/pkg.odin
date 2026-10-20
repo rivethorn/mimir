@@ -141,9 +141,11 @@ resolve_build_target :: proc(
 	clean_pkg, _ := filepath.clean(pkg_path, context.temp_allocator)
 	clean_default, _ := filepath.clean(default_src, context.temp_allocator)
 	if clean_pkg == clean_default {
+		// Same ownership contract as the other non-default targets: heap
+		// clones the caller frees.
 		return Build_Target {
-			src_path = "src",
-			exe_base = filepath.base(cwd),
+			src_path = strings.clone("src", context.allocator),
+			exe_base = strings.clone(filepath.base(cwd), context.allocator),
 			is_default = false,
 		}, nil
 	}

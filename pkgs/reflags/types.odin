@@ -130,6 +130,10 @@ Parsed_Args :: struct {
 	values:      map[string]string, // option/arg name -> string value
 	positionals: []string, // Raw positional args
 	raw_args:    []string, // All raw args after command
+	// owned strings are values the parser built itself (typed values,
+	// joined repetitions): destroy frees them. All other values borrow
+	// from the raw argument strings the caller passed to parse.
+	owned: []string,
 }
 
 // Get a typed value from parsed args
@@ -205,11 +209,16 @@ get_enum :: proc(args: Parsed_Args, name: string) -> (string, bool) {
 // Cleanup
 // ============================================================================
 
-// destroy frees the maps and slices allocated inside a Parsed_Args. Use it
-// (typically with defer) after you are done with the result of parse.
+// destroy frees the maps and slices allocated inside a Parsed_Args,
+// including the fresh value strings the parser built. Use it (typically
+// with defer) after you are done with the result of parse.
 destroy :: proc(args: Parsed_Args) {
+	for owned in args.owned {
+		delete_string(owned)
+	}
 	delete(args.values)
 	delete(args.positionals)
+	delete(args.owned)
 }
 
 // destroy_cli frees the dynamic arrays owned by the CLI's command tree

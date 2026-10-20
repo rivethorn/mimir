@@ -107,8 +107,15 @@ append(&my_cmd.arguments, reflags.arg_build(arg_b))
 
 Command handlers receive a `Parsed_Args` and read values back with the
 `get_*` accessors (`get_string`, `get_int`, `get_bool`, `get_float`,
-`get_strings`, `get_enum`). Handlers may return an `^Error` (see `make_error`);
-`Help_Requested` / `Version_Requested` reasons print help/version and exit 0.
+`get_strings`, `get_enum`). Handlers may return an `^Error` (see `make_error`
+and `command_fail`); `Help_Requested` / `Version_Requested` reasons print
+help/version and exit 0.
+
+For teardown: `destroy_cli` frees the command tree that `make_cli` keeps
+alive (notes, options, arguments, subcommands, and the heap-allocated
+root command). `destroy(parsed)` frees the parsed maps plus every value
+string the parser built itself. Values that only borrow from the raw
+arguments are not allocated at all.
 
 See `examples/hello_world/` for a minimal example, or `examples/toolkit/` for a full multi-command CLI.
 */

@@ -231,6 +231,7 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) -> ^reflags.Error {
 	clone_process, exec_err := os.process_start(clone_command)
 	if exec_err != nil {
 		stop_cli_spinner(&spin_state, spinner_thread)
+		fmt.printf("\r\x1b[2K")
 		return reflags.command_fail(
 			"mimir install",
 			fmt.tprintf("Failed to start `git clone`: %v", exec_err),
@@ -240,6 +241,7 @@ clone_repo :: proc(url, pkg_name, tmp_dir: string) -> ^reflags.Error {
 	state, _ := os.process_wait(clone_process)
 
 	stop_cli_spinner(&spin_state, spinner_thread)
+	fmt.printf("\r\x1b[2K")
 
 	if state.exit_code != 0 {
 		return reflags.command_fail(

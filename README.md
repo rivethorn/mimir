@@ -114,8 +114,8 @@ Everything you can do, in one place:
 | `mimir new <name> [-lib]` | Scaffold a fresh Odin project (root-level Odin files, `ols.json`, git init — the works; `-lib` scaffolds a library instead) |
 | `mimir build [pkg]` | Compile the project root — or the given package directory — into `bin/`, named after the directory |
 | `mimir run [pkg] [-- args]` | Build if needed, then run the project or package; pass arguments through with `--` |
-| `mimir add-col <path>` (`ac`) | Add a collection to `ols.json`, using the path as both its name and path |
-| `mimir remove-col <name>` (`rc`) | Remove a collection from `ols.json` by name |
+| `mimir add-col <path>` (`ac`) | Create the directory and add it to `ols.json`, using the path as both name and path |
+| `mimir remove-col <name>` (`rc`) | Remove the collection and its directory; prompts before deleting files |
 | `mimir install <repo>` | Build a binary — the current project (`.`) or a remote one — and install it on your system |
 | `mimir uninstall <pkg>` | Remove an installed binary from your system |
 | `mimir list` | Show installed packages |
@@ -144,8 +144,10 @@ Useful when your hands are already on the keyboard.
   `run`, a first argument that resolves to nothing — or to a file odin
   can't build — is passed through to your program as before.
 - `add-col <path>` adds `{ "name": "<path>", "path": "<path>" }` to
-  `ols.json`; `remove-col <name>` deletes the matching collection. These
-  commands also have the short aliases `ac` and `rc`.
+  `ols.json` and creates the directory (including missing parents).
+  `remove-col <name>` removes the collection directory too; it asks for
+  confirmation first if the directory contains files. These commands also
+  have the short aliases `ac` and `rc`.
 - `-dry-run` on `uninstall` and `clean` shows you exactly what would
   happen before anything does. Nice when you're not sure.
 - `-no-git` on `new` skips the `git init` when you manage version control

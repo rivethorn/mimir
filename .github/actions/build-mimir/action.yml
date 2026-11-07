@@ -149,7 +149,7 @@ runs:
     - name: Check mimir
       if: runner.os == 'Windows'
       shell: pwsh
-      run: odin check src -collection:pkgs=pkgs
+      run: odin check . -collection:pkgs=pkgs
 
     - name: Build mimir
       if: runner.os != 'Windows'

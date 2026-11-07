@@ -62,7 +62,7 @@ Prefer to build it yourself? You need Odin on your `PATH` plus `git`:
 
 ```bash
 cd mimir
-odin build src -collection:pkgs=pkgs -o:speed
+odin build . -collection:pkgs=pkgs -o:speed
 ```
 
 Then put the `mimir` binary somewhere on your `PATH`. Done.
@@ -81,8 +81,7 @@ project with:
 
 ```
 my-project/
-├── src/          # your code (must contain at least one .odin file)
-├── pkgs/         # packages you've added, living right next to your code
+├── main.odin     # your program, alongside any other project Odin files
 ├── bin/
 │   ├── debug/    # debug builds land here
 │   └── release/  # and release builds here
@@ -91,11 +90,11 @@ my-project/
 ```
 
 `mimir new` scaffolds all of this — including a `git init` — so you rarely
-have to think about it.
+have to think about it. It does not create a `src/` or `pkgs/` directory;
+add collections when you need them with `mimir add-col <path>`.
 
-With `-lib`, you get the library outline instead — no `src/` or `pkgs/`,
-just your package file at the top level, ready to be cloned straight into
-someone's `pkgs/`:
+With `-lib`, you get the library outline instead — just your package file
+at the top level:
 
 ```
 my-lib/
@@ -112,9 +111,11 @@ Everything you can do, in one place:
 
 | command | what it does |
 | ------- | ------------ |
-| `mimir new <name> [-lib]` | Scaffold a fresh Odin project (`src/`, `pkgs/`, `ols.json`, git init — the works; `-lib` scaffolds a library instead) |
-| `mimir build [pkg]` | Compile `src/` — or the given package directory — into `bin/`, named after the directory |
+| `mimir new <name> [-lib]` | Scaffold a fresh Odin project (root-level Odin files, `ols.json`, git init — the works; `-lib` scaffolds a library instead) |
+| `mimir build [pkg]` | Compile the project root — or the given package directory — into `bin/`, named after the directory |
 | `mimir run [pkg] [-- args]` | Build if needed, then run the project or package; pass arguments through with `--` |
+| `mimir add-col <path>` (`ac`) | Add a collection to `ols.json`, using the path as both its name and path |
+| `mimir remove-col <name>` (`rc`) | Remove a collection from `ols.json` by name |
 | `mimir install <repo>` | Build a binary — the current project (`.`) or a remote one — and install it on your system |
 | `mimir uninstall <pkg>` | Remove an installed binary from your system |
 | `mimir list` | Show installed packages |
@@ -133,24 +134,27 @@ Useful when your hands are already on the keyboard.
   own output shine.
 - `build` and `run` take an optional package directory or single Odin
   file: `mimir build tools/migrate` compiles that package — named after
-  the directory — into `bin/` instead of `src/`, and `mimir run
+  the directory — into `bin/` instead of compiling the project root, and `mimir run
   tools/one.odin` does the same for one file (named after the file,
   built with odin's `-file` under the hood). Either form must hold a
-  `main` procedure (bare names also resolve under `src/`, and naming
-  `src/` itself is just the default build). With an explicit target,
+  `main` procedure. The project root is the default target. With an
+  explicit target,
   `build` and `run` work outside a project too — the binary still lands
   in `bin/`, and `ols.json` collections apply when one is around. For
   `run`, a first argument that resolves to nothing — or to a file odin
   can't build — is passed through to your program as before.
+- `add-col <path>` adds `{ "name": "<path>", "path": "<path>" }` to
+  `ols.json`; `remove-col <name>` deletes the matching collection. These
+  commands also have the short aliases `ac` and `rc`.
 - `-dry-run` on `uninstall` and `clean` shows you exactly what would
   happen before anything does. Nice when you're not sure.
 - `-no-git` on `new` skips the `git init` when you manage version control
   yourself.
-- `-lib` on `new` scaffolds a library instead of a binary: no `src/` or
-  `pkgs/`, just a top-level `[name].odin` carrying `package [name]`.
+- `-lib` on `new` scaffolds a library instead of a binary: just a
+  top-level `[name].odin` carrying `package [name]`.
   Dashes become underscores (`my-lib` → `package my_lib`), and the
   `.gitignore` leaves the binary name out since there is none.
-- `run` is smart about it — it only rebuilds when your `src/` files have
+- `run` is smart about it — it only rebuilds when your Odin files have
   actually changed since the last build. Otherwise it says "Already at latest
   change" and gets on with running.
 
@@ -182,34 +186,32 @@ hello :: proc() -> string {
 }
 ```
 
-Same tradition, library-shaped: no `src/` or `pkgs/`, and the `ols.json`
-carries no `pkgs` collection since there is none to point at. Clone it
-into a project's `pkgs/` and import it by folder name.
+Same tradition, library-shaped: the `ols.json` starts with no collections.
+Add the library's directory to a project with `mimir add-col <path>`.
 
-Because Mimir reads your `ols.json` for `collections`, adding a package and
-then importing it as `pkgs:something` just works — no hand-typed
-`-collection` flags.
+Mimir reads `collections` from `ols.json` when building, so adding a
+collection automatically supplies Odin's `-collection` flag.
 
 ---
 
 ## Current state
 
-Every command is wired up and working: `new`, `build`, `run`, `install`,
-`uninstall`, `list`, `clean`, `version`, and `help` — each with its own
-`-help`. `install` builds straight into release mode and installs the
+Every command is wired up and working: `new`, `build`, `run`, `add-col`,
+`remove-col`, `install`, `uninstall`, `list`, `clean`, `version`, and `help`
+— each with its own `-help`. `install` builds straight into release mode and installs the
 binary on your system; `uninstall` takes it right back off.
 
 The codebase uses the `reflags` package for consistent command-line parsing
 throughout, making the CLI clean and maintainable. Smart rebuild detection
-keeps iteration fast — changes to your `src/` trigger rebuilds, but unchanged
+keeps iteration fast — changes to Odin files trigger rebuilds, but unchanged
 projects skip the rebuild step entirely.
 
 It's still young, so expect a rough edge or two. Hit one? File it. It's
 appreciated in advance!
 
-The project follows Odin conventions — `src/` for your code, `pkgs/` for
-everything else — and each internal package is cleanly separated so the
-language server (`ols`) can see them cleanly.
+Mimir's own internal packages remain in `pkgs/` and are configured as an
+OLS collection; projects created by Mimir start without a `pkgs/` folder or
+collection.
 
 ---
 

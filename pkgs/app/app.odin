@@ -102,7 +102,10 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	new_cmd.handler = command.handle_new
 
-	add_col_cmd := reflags.command("add-col", "Add a collection to ols.json")
+	add_col_cmd := reflags.command(
+		"add-col",
+		"Create a collection directory and add it to ols.json",
+	)
 	add_col_cmd.alias = "ac"
 	add_col_name_builder := reflags.argument(
 		"name",
@@ -113,7 +116,7 @@ build_cli :: proc() -> reflags.CLI {
 
 	remove_col_cmd := reflags.command(
 		"remove-col",
-		"Remove a collection from ols.json",
+		"Remove a collection and its directory",
 	)
 	remove_col_cmd.alias = "rc"
 	remove_col_name_builder := reflags.argument(

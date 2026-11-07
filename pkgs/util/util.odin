@@ -142,34 +142,41 @@ is_odin_project :: proc() -> bool {
 	return is_odin_project_in(project_dir)
 }
 
-// is_odin_project_in reports whether dir holds a Mimir project: a src/
-// with Odin files plus an ols.json.
+// is_odin_project_in reports whether dir holds a Mimir project: an ols.json
+// and at least one root-level Odin file or a legacy src/ Odin package.
 is_odin_project_in :: proc(dir: string) -> bool {
-	source_dir, _ := filepath.join({dir, "src"}, context.temp_allocator)
+	ols_path, _ := filepath.join({dir, "ols.json"}, context.temp_allocator)
+	if !os.exists(ols_path) {
+		return false
+	}
 
+	fd, dir_err := os.open(dir)
+	if dir_err == nil {
+		defer os.close(fd)
+		infos, read_err := os.read_dir(fd, -1, context.temp_allocator)
+		if read_err == nil {
+			for info in infos {
+				if info.type != .Directory &&
+				   filepath.ext(info.name) == ".odin" {
+					return true
+				}
+			}
+		}
+	}
+
+	source_dir, _ := filepath.join({dir, "src"}, context.temp_allocator)
 	if !os.exists(source_dir) {
 		return false
 	}
 
-	// The walker keeps internal buffers, so make sure it is destroyed
-	// however this procedure exits; breaking out of walker_walk early
-	// would otherwise leak them.
 	walker := os.walker_create(source_dir)
 	defer os.walker_destroy(&walker)
-
 	for info in os.walker_walk(&walker) {
 		if strings.has_suffix(info.fullpath, ".odin") {
 			return true
 		}
 	}
-
-	ols_path, _ := filepath.join({dir, "ols.json"}, context.temp_allocator)
-
-	if !os.exists(ols_path) {
-		return false
-	}
-
-	return true
+	return false
 }
 
 /*

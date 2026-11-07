@@ -13,20 +13,22 @@ Build_Target :: struct {
 	src_path:   string,
 	// exe_base names the binary: the package directory's name, the file
 	// stem for a single file, or the project directory's name for the
-	// default src/ build.
+	// default project-root build.
 	exe_base:   string,
 	// is_file marks a single-file target, which odin builds with -file.
 	is_file:    bool,
-	// is_default reports the default src/ build with no package argument
-	// given or (for run) an unresolvable one. Naming src/ outright still
-	// consumes the argument, so it comes back false.
+	// is_default reports the default project-root build with no package argument
+	// given or (for run) an unresolvable one. Naming the project root or
+	// legacy src/ explicitly still consumes the argument, so it comes back
+	// false.
 	is_default: bool,
 }
 
 // resolve_build_target turns the optional `pkg` argument into a Build_Target.
-// Empty means the default src/ build. Otherwise the argument names buildable
-// source: a package directory or a single Odin file, resolved as-given
-// relative to cwd, then under src/. Naming src/ itself is the default build.
+// Empty means the default project-root build. Otherwise the argument names
+// buildable source: a package directory or a single Odin file, resolved
+// as-given relative to cwd, then under src/ for compatibility with older
+// projects. Naming the project root or legacy src/ is the default build.
 // A directory must hold .odin files; either form must declare a main
 // procedure. When fallback_default is set (mimir run), an argument that
 // resolves to nothing — or to a file odin can't build — instead yields the
@@ -43,7 +45,7 @@ resolve_build_target :: proc(
 ) {
 	if pkg_arg == "" {
 		return Build_Target {
-				src_path = "src",
+				src_path = ".",
 				exe_base = filepath.base(cwd),
 				is_default = true,
 			},
@@ -78,7 +80,7 @@ resolve_build_target :: proc(
 			if kind == .Other_File {
 				if fallback_default {
 					return Build_Target {
-							src_path = "src",
+							src_path = ".",
 							exe_base = filepath.base(cwd),
 							is_default = true,
 						},
@@ -92,7 +94,7 @@ resolve_build_target :: proc(
 	if pkg_path == "" {
 		if fallback_default {
 			return Build_Target {
-					src_path = "src",
+					src_path = ".",
 					exe_base = filepath.base(cwd),
 					is_default = true,
 				},
@@ -126,17 +128,21 @@ resolve_build_target :: proc(
 		return {}, reflags.command_fail(cmd_label, fmt.tprintf("Package '%s' has no main procedure", rel))
 	}
 
-	// Naming src/ outright is just the default build: same sources, same
-	// binary name. The argument still counts as consumed (is_default stays
-	// false) so `run src` doesn't pass "src" to the program.
+	// Naming the project root or legacy src/ is the default build: same
+	// sources, same binary name. The argument still counts as consumed so
+	// `run .` and `run src` don't pass them through to the program.
 	default_src, _ := filepath.join({cwd, "src"}, context.temp_allocator)
 	clean_pkg, _ := filepath.clean(pkg_path, context.temp_allocator)
 	clean_default, _ := filepath.clean(default_src, context.temp_allocator)
-	if clean_pkg == clean_default {
+	clean_root, _ := filepath.clean(cwd, context.temp_allocator)
+	if clean_pkg == clean_default || clean_pkg == clean_root {
 		// Same ownership contract as the other non-default targets: heap
 		// clones the caller frees.
 		return Build_Target {
-				src_path = strings.clone("src", context.allocator),
+				src_path = strings.clone(
+					clean_pkg == clean_root ? "." : "src",
+					context.allocator,
+				),
 				exe_base = strings.clone(
 					filepath.base(cwd),
 					context.allocator,
@@ -158,7 +164,7 @@ resolve_build_target :: proc(
 }
 
 // require_project exits with the standard guard error unless dir holds a
-// Mimir project. Used when falling back to the default src/ build.
+// Mimir project. Used when falling back to the default project-root build.
 require_project :: proc(dir, cmd_label, hint_name: string) -> ^reflags.Error {
 	if !util.is_odin_project_in(dir) {
 		return reflags.command_fail(

@@ -32,11 +32,11 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	append(
 		&build_cmd.notes,
-		"Give a package directory or Odin file to build it instead of src/, e.g. mimir build tools/migrate",
+		"Give a package directory or Odin file to build it instead of the project root, e.g. mimir build tools/migrate",
 	)
 	build_pkg_builder := reflags.argument(
 		"pkg",
-		"Package directory or Odin file to build (defaults to src/)",
+		"Package directory or Odin file to build (defaults to the project root)",
 	)
 	reflags.arg_optional(&build_pkg_builder)
 	append(&build_cmd.arguments, reflags.arg_build(build_pkg_builder))
@@ -67,7 +67,7 @@ build_cli :: proc() -> reflags.CLI {
 	)
 	run_pkg_builder := reflags.argument(
 		"pkg",
-		"Package directory or Odin file to build and run instead of src/",
+		"Package directory or Odin file to build and run instead of the project root",
 	)
 	reflags.arg_optional(&run_pkg_builder)
 	append(&run_cmd.arguments, reflags.arg_build(run_pkg_builder))
@@ -101,6 +101,30 @@ build_cli :: proc() -> reflags.CLI {
 		reflags.opt_flag("lib", "l", "Scaffold a library instead of a binary"),
 	)
 	new_cmd.handler = command.handle_new
+
+	add_col_cmd := reflags.command("add-col", "Add a collection to ols.json")
+	add_col_cmd.alias = "ac"
+	add_col_name_builder := reflags.argument(
+		"name",
+		"Collection name and path",
+	)
+	append(&add_col_cmd.arguments, reflags.arg_build(add_col_name_builder))
+	add_col_cmd.handler = command.handle_add_col
+
+	remove_col_cmd := reflags.command(
+		"remove-col",
+		"Remove a collection from ols.json",
+	)
+	remove_col_cmd.alias = "rc"
+	remove_col_name_builder := reflags.argument(
+		"name",
+		"Collection name to remove",
+	)
+	append(
+		&remove_col_cmd.arguments,
+		reflags.arg_build(remove_col_name_builder),
+	)
+	remove_col_cmd.handler = command.handle_remove_col
 
 	// 'install' command with note and 'repo' argument
 	install_cmd := reflags.command(
@@ -160,6 +184,8 @@ build_cli :: proc() -> reflags.CLI {
 		build_cmd,
 		run_cmd,
 		new_cmd,
+		add_col_cmd,
+		remove_col_cmd,
 		install_cmd,
 		uninstall_cmd,
 		list_cmd,

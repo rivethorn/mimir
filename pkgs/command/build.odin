@@ -273,23 +273,13 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 	}
 
 	latest_src_mod := src_info.modification_time
+	walker := os.walker_create(source_path)
+	defer os.walker_destroy(&walker)
 
-	fd, dir_err := os.open(source_path)
-	if dir_err != nil {
-		return true
-	}
-	defer os.close(fd)
-
-	infos, read_err := os.read_dir(fd, -1, context.temp_allocator)
-	if read_err != nil {
-		return true
-	}
-
-	for info in infos {
-		if filepath.ext(info.name) == ".odin" {
-			if info.modification_time._nsec > latest_src_mod._nsec {
-				latest_src_mod = info.modification_time
-			}
+	for info in os.walker_walk(&walker) {
+		if filepath.ext(info.fullpath) == ".odin" &&
+		   info.modification_time._nsec > latest_src_mod._nsec {
+			latest_src_mod = info.modification_time
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
-Mimir - Odin's toolchain
+Mimir - Odin's little toolchain
 
 The command line is defined and parsed in pkgs:args (with reflags). Each
 command has its handler attached via reflags' Command_Handler system, so

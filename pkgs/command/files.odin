@@ -19,9 +19,7 @@ FMT_FILE_CONTENT: string : `{
 
 OLS_FILE_CONTENT: string : `{
     "$schema": "https://raw.githubusercontent.com/DanielGavin/ols/master/misc/ols.schema.json",
-    "collections": [
-        { "name": "pkgs", "path": "pkgs" }
-    ],
+    "collections": [],
     "enable_document_symbols": true,
     "enable_hover": true,
     "enable_snippets": true,

@@ -8,7 +8,7 @@ import "pkgs:reflags"
 // and therefore requires one to be present.
 is_project_command :: proc(cmd_name: string) -> bool {
 	switch cmd_name {
-	case "build", "run", "clean":
+	case "build", "run", "clean", "add-col", "remove-col":
 		return true
 	case:
 		return false

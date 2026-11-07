@@ -144,7 +144,7 @@ runs:
     - name: Check mimir
       if: runner.os != 'Windows'
       shell: bash
-      run: odin check src -collection:pkgs=pkgs
+      run: odin check . -collection:pkgs=pkgs
 
     - name: Check mimir
       if: runner.os == 'Windows'
@@ -156,13 +156,13 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        odin build src -collection:pkgs=pkgs -o:speed -out:mimir
+        odin build . -collection:pkgs=pkgs -o:speed -out:mimir
         chmod +x mimir
 
     - name: Build mimir
       if: runner.os == 'Windows'
       shell: pwsh
-      run: odin build src -collection:pkgs=pkgs -o:speed -out:mimir.exe
+      run: odin build . -collection:pkgs=pkgs -o:speed -out:mimir.exe
 
     - name: Package mimir
       if: runner.os != 'Windows'

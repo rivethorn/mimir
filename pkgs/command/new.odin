@@ -84,7 +84,7 @@ handle_new :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 
 		readme_path := fmt.tprintf("%s/README.md", project_dir)
 		readme_content := fmt.tprintf(
-			"# %s\n\nAn [Odin](https://odin-lang.org) library managed via **Mimir**.\n\n## Quick Start\n\nClone it into your project's `pkgs/` directory and import it by folder name.",
+			"# %s\n\nAn [Odin](https://odin-lang.org) library managed via **Mimir**.\n\n## Quick Start\n\nAdd this directory to a project's collections with `mimir add-col <path>`.",
 			project_name,
 		)
 		if err := os.write_entire_file(
@@ -130,34 +130,7 @@ handle_new :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 			)
 		}
 	} else {
-		pkgs_dir := fmt.tprintf("%s/pkgs", project_dir)
-		if err := os.make_directory(pkgs_dir); err != nil {
-			if !os.exists(pkgs_dir) {
-				return reflags.command_fail(
-					"mimir new",
-					fmt.tprintf(
-						"Failed to create directory '%s': %v",
-						pkgs_dir,
-						err,
-					),
-				)
-			}
-		}
-
-		src_dir := fmt.tprintf("%s/src", project_dir)
-		if err := os.make_directory(src_dir); err != nil {
-			if !os.exists(src_dir) {
-				return reflags.command_fail(
-					"mimir new",
-					fmt.tprintf(
-						"Failed to create directory '%s': %v",
-						src_dir,
-						err,
-					),
-				)
-			}
-		}
-		main_path := fmt.tprintf("%s/src/main.odin", project_dir)
+		main_path := fmt.tprintf("%s/main.odin", project_dir)
 		if err := os.write_entire_file(
 			main_path,
 			transmute([]byte)(MAIN_FILE_CONTENT),

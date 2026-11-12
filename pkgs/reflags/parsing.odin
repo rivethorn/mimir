@@ -16,6 +16,7 @@ Parse_Ctx :: struct {
 	current_cmd:      ^Command,
 	args:             []string,
 	values:           map[string]string,
+	multiple_values:  map[string][dynamic]string,
 	positionals:      [dynamic]string,
 	owned:            [dynamic]string, // Fresh strings stored into `values`
 	seen_options:     map[string]bool,
@@ -33,6 +34,29 @@ value_copy :: proc(ctx: ^Parse_Ctx, val: string) -> string {
 	owned := strings.clone(val, context.allocator)
 	append(&ctx.owned, owned)
 	return owned
+}
+
+@(private = "file")
+store_option_value :: proc(ctx: ^Parse_Ctx, opt: Option, value: string) {
+	if !opt.multiple {
+		ctx.values[opt.name] = value
+		return
+	}
+
+	values := ctx.multiple_values[opt.name]
+	append(&values, value)
+	ctx.multiple_values[opt.name] = values
+
+	existing := ctx.values[opt.name]
+	if existing != "" {
+		joined := strings.concatenate(
+			{existing, ",", value},
+			context.temp_allocator,
+		)
+		ctx.values[opt.name] = value_copy(ctx, joined)
+	} else {
+		ctx.values[opt.name] = value
+	}
 }
 
 // discard_ctx_owned frees the parse-owned value strings of a failed parse.
@@ -62,19 +86,21 @@ parse :: proc(
 	^Re_Error,
 ) {
 	ctx := Parse_Ctx {
-		cli          = cli,
-		current_cmd  = cli.root_cmd,
-		args         = args,
-		values       = make(map[string]string),
-		positionals  = make([dynamic]string),
-		seen_options = make(map[string]bool),
-		strict       = strict,
-		style        = cli.style,
+		cli             = cli,
+		current_cmd     = cli.root_cmd,
+		args            = args,
+		values          = make(map[string]string),
+		multiple_values = make(map[string][dynamic]string),
+		positionals     = make([dynamic]string),
+		seen_options    = make(map[string]bool),
+		strict          = strict,
+		style           = cli.style,
 	}
 
 	// Parse command hierarchy
 	if err := parse_commands(&ctx); err != nil {
 		delete(ctx.values)
+		destroy_multiple_values(ctx.multiple_values)
 		delete(ctx.positionals)
 		delete(ctx.seen_options)
 		discard_ctx_owned(&ctx)
@@ -84,6 +110,7 @@ parse :: proc(
 	// Parse options and arguments for the final command
 	if err := parse_options_and_args(&ctx); err != nil {
 		delete(ctx.values)
+		destroy_multiple_values(ctx.multiple_values)
 		delete(ctx.positionals)
 		delete(ctx.seen_options)
 		discard_ctx_owned(&ctx)
@@ -93,6 +120,7 @@ parse :: proc(
 	// Validate required options/args
 	if err := validate_parsed(&ctx); err != nil {
 		delete(ctx.values)
+		destroy_multiple_values(ctx.multiple_values)
 		delete(ctx.positionals)
 		delete(ctx.seen_options)
 		discard_ctx_owned(&ctx)
@@ -102,11 +130,20 @@ parse :: proc(
 	parsed: Parsed_Args
 	parsed.command = ctx.current_cmd
 	parsed.values = ctx.values
+	parsed.multiple_values = ctx.multiple_values
 	parsed.positionals = ctx.positionals[:]
 	parsed.owned = ctx.owned[:]
 	delete(ctx.seen_options)
 
 	return parsed, nil
+}
+
+@(private = "file")
+destroy_multiple_values :: proc(values: map[string][dynamic]string) {
+	for _, list in values {
+		delete(list)
+	}
+	delete(values)
 }
 
 // parse_or_exit is a convenience wrapper around parse: on error it prints
@@ -305,20 +342,7 @@ parse_long_option :: proc(
 		if err != nil {
 			return err
 		}
-		if opt.multiple {
-			existing := ctx.values[name]
-			if existing != "" {
-				joined := strings.concatenate(
-					{existing, ",", parsed_val},
-					context.temp_allocator,
-				)
-				ctx.values[name] = value_copy(ctx, joined)
-			} else {
-				ctx.values[name] = parsed_val
-			}
-		} else {
-			ctx.values[name] = parsed_val
-		}
+		store_option_value(ctx, opt, parsed_val)
 		ctx.seen_options[name] = true
 	}
 
@@ -365,20 +389,7 @@ parse_short_options :: proc(
 					if err != nil {
 						return err
 					}
-					if opt.multiple {
-						existing := ctx.values[opt.name]
-						if existing != "" {
-							joined := strings.concatenate(
-								{existing, ",", parsed_val},
-								context.temp_allocator,
-							)
-							ctx.values[opt.name] = value_copy(ctx, joined)
-						} else {
-							ctx.values[opt.name] = parsed_val
-						}
-					} else {
-						ctx.values[opt.name] = parsed_val
-					}
+					store_option_value(ctx, opt, parsed_val)
 					ctx.seen_options[opt.name] = true
 					break
 				}
@@ -388,20 +399,7 @@ parse_short_options :: proc(
 				if err != nil {
 					return err
 				}
-				if opt.multiple {
-					existing := ctx.values[opt.name]
-					if existing != "" {
-						joined := strings.concatenate(
-							{existing, ",", parsed_val},
-							context.temp_allocator,
-						)
-						ctx.values[opt.name] = value_copy(ctx, joined)
-					} else {
-						ctx.values[opt.name] = parsed_val
-					}
-				} else {
-					ctx.values[opt.name] = parsed_val
-				}
+				store_option_value(ctx, opt, parsed_val)
 				ctx.seen_options[opt.name] = true
 				break
 			} else if index_ptr^ + 1 < len(ctx.args) {
@@ -420,20 +418,7 @@ parse_short_options :: proc(
 				if err != nil {
 					return err
 				}
-				if opt.multiple {
-					existing := ctx.values[opt.name]
-					if existing != "" {
-						joined := strings.concatenate(
-							{existing, ",", parsed_val},
-							context.temp_allocator,
-						)
-						ctx.values[opt.name] = value_copy(ctx, joined)
-					} else {
-						ctx.values[opt.name] = parsed_val
-					}
-				} else {
-					ctx.values[opt.name] = parsed_val
-				}
+				store_option_value(ctx, opt, parsed_val)
 				ctx.seen_options[opt.name] = true
 			} else {
 				return make_error(
@@ -819,20 +804,7 @@ parse_options_and_args_odin :: proc(ctx: ^Parse_Ctx) -> ^Re_Error {
 			if err != nil {
 				return err
 			}
-			if opt.multiple {
-				existing := ctx.values[opt.name]
-				if existing != "" {
-					joined := strings.concatenate(
-						{existing, ",", parsed_val},
-						context.temp_allocator,
-					)
-					ctx.values[opt.name] = value_copy(ctx, joined)
-				} else {
-					ctx.values[opt.name] = parsed_val
-				}
-			} else {
-				ctx.values[opt.name] = parsed_val
-			}
+			store_option_value(ctx, opt, parsed_val)
 			ctx.seen_options[opt.name] = true
 		}
 

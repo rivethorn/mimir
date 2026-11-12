@@ -112,8 +112,8 @@ Everything you can do, in one place:
 | command | what it does |
 | ------- | ------------ |
 | `mimir new <name> [-lib]` | Scaffold a fresh Odin project (root-level Odin files, `ols.json`, git init — the works; `-lib` scaffolds a library instead) |
-| `mimir build [pkg] [-odin-flag:<flag> ...]` | Compile the project root — or the given package directory — into `bin/`, named after the directory |
-| `mimir run [pkg] [-odin-flag:<flag> ...] [-- args]` | Build if needed, then run the project or package; pass arguments through with `--` |
+| `mimir build [pkg] [-cflag:<flag> ...]` | Compile the project root — or the given package directory — into `bin/`, named after the directory |
+| `mimir run [pkg] [-cflag:<flag> ...] [-- args]` | Build if needed, then run the project or package; pass arguments through with `--` |
 | `mimir add-col <path>` (`ac`) | Create the directory and add it to `ols.json`, using the path as both name and path |
 | `mimir remove-col <name>` (`rc`) | Remove the collection and its directory; prompts before deleting files |
 | `mimir install <repo>` | Build a binary — the current project (`.`) or a remote one — and install it on your system |
@@ -132,11 +132,11 @@ Useful when your hands are already on the keyboard.
   release binaries stay separate, so one never clobbers the other.
 - `-silent` on `build` and `run` quiets the chit-chat and lets your
   own output shine.
-- `-odin-flag:<flag>` on `build` and `run` passes an additional flag to the
+- `-cflag:<flag>` on `build` and `run` passes an additional flag to the
   Odin compiler. Repeat it for multiple flags, for example
-  `mimir build -odin-flag:-no-bounds-check -odin-flag:-define:FEATURE=true`.
+  `mimir build -cflag:-no-bounds-check -cflag:-define:FEATURE=true`.
   For `run`, put compiler flags before `--`; arguments after `--` go to your
-  program, e.g. `mimir run -odin-flag:-no-bounds-check -- arg1`. Mimir
+  program, e.g. `mimir run -cflag:-no-bounds-check -- arg1`. Mimir
   rebuilds when this compiler-flag set changes.
 - `build` and `run` take an optional package directory or single Odin
   file: `mimir build tools/migrate` compiles that package — named after

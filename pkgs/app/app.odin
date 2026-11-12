@@ -30,9 +30,19 @@ build_cli :: proc() -> reflags.CLI {
 		&build_cmd.options,
 		reflags.opt_flag("silent", "s", "Silent the terminal output"),
 	)
+	build_compiler_flag := reflags.option(
+		"cflag",
+		"Pass an additional flag to the Odin compiler (repeatable)",
+	)
+	reflags.opt_multiple(&build_compiler_flag)
+	append(&build_cmd.options, reflags.opt_build(build_compiler_flag))
 	append(
 		&build_cmd.notes,
 		"Give a package directory or Odin file to build it instead of the project root, e.g. mimir build tools/migrate",
+	)
+	append(
+		&build_cmd.notes,
+		"Pass compiler flags with -cflag:<flag>, e.g. mimir build -cflag:-no-bounds-check",
 	)
 	build_pkg_builder := reflags.argument(
 		"pkg",
@@ -54,6 +64,10 @@ build_cli :: proc() -> reflags.CLI {
 		"Use '--' to pass arguments through to your project, e.g. mimir run -- arg1",
 	)
 	append(
+		&run_cmd.notes,
+		"Pass compiler flags before '--' with -cflag:<flag>, e.g. mimir run -cflag:-no-bounds-check -- arg1",
+	)
+	append(
 		&run_cmd.options,
 		reflags.opt_flag(
 			"release",
@@ -65,6 +79,12 @@ build_cli :: proc() -> reflags.CLI {
 		&run_cmd.options,
 		reflags.opt_flag("silent", "s", "Silent the terminal output"),
 	)
+	run_compiler_flag := reflags.option(
+		"cflag",
+		"Pass an additional flag to the Odin compiler (repeatable)",
+	)
+	reflags.opt_multiple(&run_compiler_flag)
+	append(&run_cmd.options, reflags.opt_build(run_compiler_flag))
 	run_pkg_builder := reflags.argument(
 		"pkg",
 		"Package directory or Odin file to build and run instead of the project root",

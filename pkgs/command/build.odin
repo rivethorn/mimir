@@ -5,6 +5,7 @@ import "core:encoding/json"
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
+import "core:strings"
 
 import "core:terminal/ansi"
 import "pkgs:cli"
@@ -25,6 +26,7 @@ Build_Config :: struct {
 	name:            string,
 	src_path:        string,
 	output:          string,
+	compiler_flags:  []string,
 	release, silent: bool,
 	// is_file builds a single file with `odin build -file`.
 	is_file:         bool,
@@ -203,6 +205,7 @@ start_build :: proc(
 	defer delete(command)
 
 	append(&command, ..collections[:])
+	append(&command, ..config.compiler_flags)
 
 	build_command := os.Process_Desc {
 		command     = command[:],
@@ -229,6 +232,30 @@ start_build :: proc(
 				proc_state.exit_code,
 			),
 			proc_state.exit_code,
+		)
+	}
+
+	binary_path, _ := filepath.join(
+		{cwd, config.output},
+		context.temp_allocator,
+	)
+	flags_path := fmt.tprintf("%s.mimir-flags", binary_path)
+	flags_content := strings.join(
+		config.compiler_flags,
+		"\x00",
+		context.temp_allocator,
+	)
+	if write_err := os.write_entire_file(
+		flags_path,
+		transmute([]u8)flags_content,
+	); write_err != nil {
+		return .None, reflags.command_fail(
+			"mimir build",
+			fmt.tprintf(
+				"Failed to save compiler flags for '%s': %v",
+				config.name,
+				write_err,
+			),
 		)
 	}
 
@@ -286,10 +313,31 @@ needs_rebuild :: proc(source_path, binary_path: string) -> bool {
 	return latest_src_mod._nsec > bin_info.modification_time._nsec
 }
 
+@(private = "file")
+compiler_flags_match :: proc(binary_path: string, flags: []string) -> bool {
+	flags_path := fmt.tprintf("%s.mimir-flags", binary_path)
+	if !os.exists(flags_path) {
+		return len(flags) == 0
+	}
+
+	cached_flags, err := os.read_entire_file(
+		flags_path,
+		context.temp_allocator,
+	)
+	if err != nil {
+		return false
+	}
+
+	expected := strings.join(flags, "\x00", context.temp_allocator)
+	return string(cached_flags) == expected
+}
+
 handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	release := reflags.get_bool(args, "release")
 	silent := reflags.get_bool(args, "silent")
 	pkg := reflags.get_string(args, "pkg")
+	compiler_flags := reflags.get_strings(args, "cflag")
+	defer delete(compiler_flags)
 
 	project_dir, err := os.get_working_directory(context.allocator)
 	if err != nil {
@@ -354,7 +402,13 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		)
 	}
 	defer delete_string(output)
-	if !silent && !needs_rebuild(source_abs, output) {
+	output_abs, _ := filepath.join(
+		{project_dir, output},
+		context.temp_allocator,
+	)
+	if !silent &&
+	   !needs_rebuild(source_abs, output_abs) &&
+	   compiler_flags_match(output_abs, compiler_flags) {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -383,12 +437,13 @@ handle_build :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 	}
 
 	config := Build_Config {
-		name     = target.exe_base,
-		src_path = target.src_path,
-		output   = output,
-		release  = release,
-		silent   = silent,
-		is_file  = target.is_file,
+		name           = target.exe_base,
+		src_path       = target.src_path,
+		output         = output,
+		compiler_flags = compiler_flags,
+		release        = release,
+		silent         = silent,
+		is_file        = target.is_file,
 	}
 	build_err, build_fail := start_build(&config, project_dir)
 	if build_fail != nil {
@@ -418,6 +473,8 @@ handle_build_cwd :: proc(
 	silent :=
 		args.command.name == "install" ? false : reflags.get_bool(args, "silent")
 	pkg := reflags.get_string(args, "pkg")
+	compiler_flags := reflags.get_strings(args, "cflag")
+	defer delete(compiler_flags)
 
 	cmd_label := fmt.tprintf("mimir %s", args.command.name)
 	target, target_fail := resolve_build_target(
@@ -478,7 +535,12 @@ handle_build_cwd :: proc(
 	}
 	defer delete_string(output)
 
-	if !needs_rebuild(source_abs, output) {
+	output_abs, _ := filepath.join(
+		{project_dir, output},
+		context.temp_allocator,
+	)
+	if !needs_rebuild(source_abs, output_abs) &&
+	   compiler_flags_match(output_abs, compiler_flags) {
 		fmt.println(
 			cli.color_ansi(ansi.BOLD),
 			cli.color_ansi(ansi.FG_BRIGHT_GREEN),
@@ -507,12 +569,13 @@ handle_build_cwd :: proc(
 	}
 
 	config := Build_Config {
-		name     = target.exe_base,
-		src_path = target.src_path,
-		output   = output,
-		release  = release,
-		silent   = silent,
-		is_file  = target.is_file,
+		name           = target.exe_base,
+		src_path       = target.src_path,
+		output         = output,
+		compiler_flags = compiler_flags,
+		release        = release,
+		silent         = silent,
+		is_file        = target.is_file,
 	}
 
 	build_err, build_fail := start_build(&config, cwd)

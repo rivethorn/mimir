@@ -24,6 +24,9 @@ OLS_FILE_CONTENT: string : `{
     "enable_hover": true,
     "enable_snippets": true,
     "enable_fake_methods": true,
+    "enable_checker_only_saved": false,
+    "enable_checker_on_change": true,
+    "checker_on_change_delay": 200,
     "enable_inlay_hints_params": false,
     "checker_args": "-debug -strict-style -vet -disallow-do"
 }`
@@ -35,6 +38,9 @@ OLS_LIB_CONTENT: string : `{
     "enable_hover": true,
     "enable_snippets": true,
     "enable_fake_methods": true,
+    "enable_checker_only_saved": false,
+    "enable_checker_on_change": true,
+    "checker_on_change_delay": 200,
     "enable_inlay_hints_params": false,
     "checker_args": "-debug -strict-style -vet -disallow-do"
 }`

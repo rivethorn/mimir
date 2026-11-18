@@ -3,7 +3,6 @@ package command
 import "core:fmt"
 import "core:os"
 import "core:path/filepath"
-import "core:sys/posix"
 import "core:terminal/ansi"
 import "pkgs:cli"
 import "pkgs:reflags"
@@ -117,11 +116,7 @@ handle_run :: proc(args: reflags.Parsed_Args) -> ^reflags.Error {
 		}
 	}
 
-	when ODIN_OS == .Windows {
-		setup_console_ctrl_handler()
-	} else {
-		posix.signal(.SIGINT, nil)
-	}
+	setup_console_ctrl_handler()
 
 	run_process, exec_err := os.process_start(run_command)
 	if exec_err != nil {
